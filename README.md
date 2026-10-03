@@ -154,7 +154,8 @@ The workflow needs permission to update your `TOKEN` secret, which the default G
   - **Expiration:** your choice, Set it to `No Expiration` to forget about it. When it expires, generate a new one and update the `GH_PAT` secret
   - **Repository access:** **Only select repositories** → your fork of `cidercade-completer`
   - **Permissions** → **Repository permissions** → **Secrets:** **Read and write**, and **Variables:** **Read and write**
-    <img width="801" height="920" alt="{49E3ED9B-BBFD-4CCB-A942-8921B9707B95}" src="https://github.com/user-attachments/assets/f20fd14a-bed4-4934-b72f-0076b7c2e89d" />
+    <img width="822" height="614" alt="{CE160DBF-0A65-4465-918B-F97A1BDA1FFD}" src="https://github.com/user-attachments/assets/37ab20f9-12fe-4aa8-b528-85819a3aa88c" />
+
 3. Click **Generate token** and copy it. GitHub only shows it once
     <img width="784" height="196" alt="{41D6FC52-D2F9-4B2B-AD9B-EF4D63B5AFFB}" src="https://github.com/user-attachments/assets/17eb710f-5ee7-4ca5-8b5c-5fd024a63455" />
 
