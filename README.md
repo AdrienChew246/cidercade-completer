@@ -121,7 +121,7 @@ Instead of copying a new token from your browser every month, your phone can ref
 
 Once set up, it works like this with no input from you:
 
-1. **Daily Cidercade** notices your token has expired, posts **Token Expired** to Discord, and Cidercade texts a verification code to your phone
+1. **Daily Cidercade** notices your token has expired ands texts a verification code to your phone
 2. An automation on your phone sees the text and runs the **Authenticate Cidercade** workflow with it
 3. The workflow signs in, saves the new token to your `TOKEN` secret, and runs the daily tasks
 
