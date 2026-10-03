@@ -154,9 +154,10 @@ The workflow needs permission to update your `TOKEN` secret, which the default G
   - **Expiration:** your choice, Set it to `No Expiration` to forget about it. When it expires, generate a new one and update the `GH_PAT` secret
   - **Repository access:** **Only select repositories** → your fork of `cidercade-completer`
   - **Permissions** → **Repository permissions** → **Secrets:** **Read and write**, and **Variables:** **Read and write** (used for [admission piece tracking](#tracking-admission-pieces))
-  ![{AC19BB1B-D248-4994-AC78-472EBE14C1D1}](https://github.com/user-attachments/assets/ca43fd3e-8ac8-4c46-9560-e2a73ba892d9)
+    <img width="801" height="920" alt="{49E3ED9B-BBFD-4CCB-A942-8921B9707B95}" src="https://github.com/user-attachments/assets/f20fd14a-bed4-4934-b72f-0076b7c2e89d" />
 3. Click **Generate token** and copy it. GitHub only shows it once
-  ![image](https://github.com/user-attachments/assets/2a3a3d32-ccb1-43af-9d32-ec1876cb38c9)
+    <img width="784" height="196" alt="{41D6FC52-D2F9-4B2B-AD9B-EF4D63B5AFFB}" src="https://github.com/user-attachments/assets/17eb710f-5ee7-4ca5-8b5c-5fd024a63455" />
+
 
 
 
@@ -199,7 +200,8 @@ Add the GitHub **Dispatch Workflow** action and fill in:
 
 It should look something like this:
 
-![image](https://github.com/user-attachments/assets/9d78c641-b660-4676-9571-869529216052)
+<img width="302" height="455" alt="image" src="https://github.com/user-attachments/assets/ebd70b64-d683-4623-af5c-2ac1e11521fc" />
+
 
 #### Android
 
@@ -254,6 +256,7 @@ Cidercade does not show overflowed puzzle pieces in their app or website. Theref
 cidercade-completer can help count overflowed puzzle pieces. Each run adds the admission pieces it earned and subtracts any you used since the last run (from your Cidercade activity history). The loot box summary in Discord then shows something like:
 
 > You have **9** admission puzzle pieces (**2** admissions)
+> 
 > **25** pieces earned in total since tracking started
 
 Tracking is off unless you turn it on. Without `GH_PAT`, the count line is left out of the summary. To turn it on, add a `GH_PAT` secret with **Variables: Read and write** permission (see [Step 1 of automatic OTP token refresh](#step-1-create-a-github-personal-access-token)). The count is stored in a repository variable called `ADMISSION_PIECES`, under **Settings** → **Secrets and variables** → **Actions** → **Variables**. If you know your real count, you can edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
