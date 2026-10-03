@@ -139,10 +139,14 @@ The workflow needs permission to update your `TOKEN` secret, which the default G
 1. Go to **[Settings** → Developer settings → Fine-grained tokens → **Generate new token](https://github.com/settings/personal-access-tokens/new)**
 2. Fill in:
   - **Token name:** anything, e.g. `cidercade-secret-writer`
-  - **Expiration:** your choice. When it expires, generate a new one and update the `GH_PAT` secret
+  - **Expiration:** your choice, Set it to `No Expiration` to forget about it. When it expires, generate a new one and update the `GH_PAT` secret
   - **Repository access:** **Only select repositories** → your fork of `cidercade-completer`
   - **Permissions** → **Repository permissions** → **Secrets:** **Read and write**
+    <img width="803" height="910" alt="{AC19BB1B-D248-4994-AC78-472EBE14C1D1}" src="https://github.com/user-attachments/assets/ca43fd3e-8ac8-4c46-9560-e2a73ba892d9" />
+
 3. Click **Generate token** and copy it. GitHub only shows it once
+    <img width="788" height="237" alt="image" src="https://github.com/user-attachments/assets/2a3a3d32-ccb1-43af-9d32-ec1876cb38c9" />
+
 
 ### Step 2: Add the secrets
 
@@ -161,6 +165,8 @@ Follow the instructions for your phone.
 
 #### iPhone
 
+You may use this [Shortcut template](https://www.icloud.com/shortcuts/486ac665779d4ad8bf6dfc116fb99bfa) or create a shortcut manually as shown below
+
 1. Open the **Shortcuts** app
 2. Tap **+** (or **New Automation**), press edit, and search for Automation "When I recieve a message where"
 3. Configure it where "Message" contains text `Your Cidercade verification code is:` and confirm
@@ -175,6 +181,10 @@ Add the GitHub **Dispatch Workflow** action and fill in:
 | Repository  | `cidercade-completer` (your fork)                                                                  |
 | Branch / ref      | `master`                                                                                           |
 | Inputs      | `{"message":"[Message]"}` (where `[Message]` is the variable created from the previous automation) |
+
+It should look something like this:
+
+<img width="302" height="455" alt="image" src="https://github.com/user-attachments/assets/9d78c641-b660-4676-9571-869529216052" />
 
 
 #### Android
