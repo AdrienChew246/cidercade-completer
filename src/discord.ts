@@ -59,9 +59,9 @@ export async function postRunSummary(outcomes: TaskOutcome[]) {
   await postEmbed(buildSummaryEmbed(outcomes));
 }
 
-export async function postTokenExpiredNotice() {
+export async function postInvalidTokenNotice() {
   await postEmbed({
-    title: "Token Expired",
+    title: "Token Invalid",
     description:
       "Sending OTP to phone. Run the **Authenticate Cidercade** workflow with the verification SMS.",
     color: COLOR_FAILURE,

@@ -1,5 +1,5 @@
 import { candyBlastTask } from "./candy-blast";
-import { postRunSummary, postTokenExpiredNotice } from "./discord";
+import { postInvalidTokenNotice, postRunSummary } from "./discord";
 import { lootBoxTask } from "./loot-box";
 import { formatError, isTaskSuccessful, runTask, type Task } from "./task";
 import { wotdTask } from "./wotd";
@@ -81,6 +81,17 @@ export async function getEndUsers<T = unknown>(path: string) {
   return fetchEndUsers<T>("GET", path);
 }
 
+async function requestOtpAndExit() {
+  console.log("Sending OTP to phone.");
+  try {
+    await postInvalidTokenNotice();
+  } catch (error) {
+    console.error(`Discord notification failed: ${formatError(error)}`);
+  }
+  await postEndUsers("authentication/send-code", { phone: process.env.PHONE_NUMBER, program_slug: "cidercade" });
+  process.exit(0);
+}
+
 async function* runSequentially(tasks: Task<unknown>[]) {
   for (const task of tasks) {
     const outcome = await runTask(task);
@@ -90,17 +101,7 @@ async function* runSequentially(tasks: Task<unknown>[]) {
       "error" in outcome.status &&
       outcome.status.error?.includes("Not Authorized")
     ) {
-      console.log("Not Authorized, sending OTP");
-      try {
-        await postTokenExpiredNotice();
-      } catch (error) {
-        console.error(`Discord notification failed: ${formatError(error)}`);
-      }
-      await postEndUsers("authentication/send-code", {
-        phone: process.env.PHONE_NUMBER,
-        program_slug: "cidercade",
-      });
-      process.exit(1);
+      await requestOtpAndExit();
     }
     yield outcome;
   }
@@ -108,6 +109,9 @@ async function* runSequentially(tasks: Task<unknown>[]) {
 
 async function main() {
   if (!process.env.TOKEN) {
+    if (process.env.PHONE_NUMBER) {
+      await requestOtpAndExit();
+    }
     throw new Error("TOKEN is not set in the environment");
   }
 
