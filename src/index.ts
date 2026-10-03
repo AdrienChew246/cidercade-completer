@@ -1,7 +1,8 @@
-import { completeLevels } from "./candy-blast";
-import { postRunSummary, type TaskOutcome } from "./discord";
-import { type LootBoxRewardResponse, redeemAllLootBoxes } from "./loot-box";
-import { solveWOTD } from "./wotd";
+import { candyBlastTask } from "./candy-blast";
+import { postRunSummary } from "./discord";
+import { lootBoxTask } from "./loot-box";
+import { formatError, isTaskSuccessful, runTask, type Task } from "./task";
+import { wotdTask } from "./wotd";
 
 const Authorization = `Token ${process.env.TOKEN}`;
 
@@ -22,14 +23,6 @@ type ApiErrorBody = {
   error?: string;
   message?: string;
 };
-
-function formatError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
 
 function getApiErrorMessage(body: unknown, status: number) {
   if (body && typeof body === "object") {
@@ -88,58 +81,28 @@ export async function getEndUsers<T = unknown>(path: string) {
   return fetchEndUsers<T>("GET", path);
 }
 
-async function runTask<T>(
-  name: string,
-  task: () => Promise<T>,
-): Promise<TaskOutcome<T>> {
-  const startedAt = Date.now();
-
-  try {
-    const data = await task();
-    return {
-      name,
-      ok: true,
-      data,
-      durationMs: Date.now() - startedAt,
-    };
-  } catch (error) {
-    const message = formatError(error);
-    console.error(`[${name}] ${message}`);
-    return {
-      name,
-      ok: false,
-      error: message,
-      durationMs: Date.now() - startedAt,
-    };
+async function* runSequentially(tasks: Task<unknown>[]) {
+  for (const task of tasks) {
+    yield await runTask(task);
   }
 }
-
-const LOOT_BOX_PATH = "loot-boxes/3a623991-6a4e-448e-9a11-40cc53e3b9fb/open";
-const TASK_COMPLETION_DELAY_MS = 1500;
 
 async function main() {
   if (!process.env.TOKEN) {
     throw new Error("TOKEN is not set in the environment");
   }
 
-  const wotd = await runTask("Word of the Day", solveWOTD);
-  const candyBlast = await runTask("Candy Blast", completeLevels);
-
-  await Bun.sleep(TASK_COMPLETION_DELAY_MS);
-
-  const lootBoxes = await runTask("Loot boxes", () =>
-    redeemAllLootBoxes(() =>
-      postEndUsers<LootBoxRewardResponse>(LOOT_BOX_PATH),
-    ),
+  const outcomes = await Array.fromAsync(
+    runSequentially([wotdTask, candyBlastTask, lootBoxTask]),
   );
 
   try {
-    await postRunSummary(wotd, candyBlast, lootBoxes);
+    await postRunSummary(outcomes);
   } catch (error) {
     console.error(`Discord notification failed: ${formatError(error)}`);
   }
 
-  if (!wotd.ok || !wotd.data?.solved || !candyBlast.ok) {
+  if (!outcomes.every(isTaskSuccessful)) {
     process.exit(1);
   }
 }

@@ -1,5 +1,5 @@
 import { getEndUsers } from "..";
-import { type GameResult, markAlreadyCompleted } from "../discord";
+import { type GameResult, markAlreadyCompleted, type Task } from "../task";
 import {
   DEFAULT_PROJECT_ID,
   DEFAULT_VALIDATOR_ID,
@@ -139,6 +139,15 @@ export async function completeLevels(): Promise<GameResult<CandyBlastGame>> {
 
   return game;
 }
+
+export const candyBlastTask: Task<GameResult<CandyBlastGame>> = {
+  name: "Candy Blast",
+  showResult: true,
+  run: completeLevels,
+  getStatus(data) {
+    return data.alreadyCompleted ? "already-completed" : "success";
+  },
+};
 
 /**
  * Returns a random number >= min and <= max, ending with 0 or 5

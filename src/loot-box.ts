@@ -1,4 +1,9 @@
-const ADMISSION_PIECES_REQUIRED = 4;
+import { postEndUsers } from ".";
+import type { Task } from "./task";
+
+const LOOT_BOX_PATH = "loot-boxes/3a623991-6a4e-448e-9a11-40cc53e3b9fb/open";
+/** Loot boxes earned by earlier tasks take a moment to become redeemable. */
+const LOOT_BOX_SETTLE_DELAY_MS = 1500;
 
 type PuzzlePiece = {
   reward_id: number;
@@ -78,10 +83,6 @@ function getPieceLabel(outcome: LootBoxRewardOutcome) {
   );
 }
 
-function isAdmissionPuzzle(name: string) {
-  return name.toLowerCase().includes("admission");
-}
-
 function groupEarnedPieces(outcomes: LootBoxRewardResponse[]) {
   const counts = new Map<string, number>();
 
@@ -93,68 +94,12 @@ function groupEarnedPieces(outcomes: LootBoxRewardResponse[]) {
   return counts;
 }
 
-function getAdmissionProgress(outcomes: LootBoxRewardResponse[]) {
-  const puzzle = [...outcomes]
-    .reverse()
-    .map((outcome) => outcome.loot_box_reward_outcome.reward.puzzle)
-    .find((candidate) => candidate && isAdmissionPuzzle(candidate.name));
-
-  if (!puzzle) return null;
-
-  const completedPieces = puzzle.pieces.filter(
-    (piece) => piece.is_complete,
-  ).length;
-  const totalPieces = puzzle.pieces.length || ADMISSION_PIECES_REQUIRED;
-  const remaining = Math.max(totalPieces - completedPieces, 0);
-
-  if (remaining === 0) {
-    return null;
-  }
-
-  return `${remaining} more admission piece${remaining === 1 ? "" : "s"} needed (${completedPieces}/${totalPieces})`;
-}
-
-function getNewlyCompletedPuzzles(outcomes: LootBoxRewardResponse[]) {
-  const puzzles = new Map<string, Puzzle>();
-
-  for (const outcome of outcomes) {
-    const puzzle = outcome.loot_box_reward_outcome.reward.puzzle;
-    if (puzzle) {
-      puzzles.set(puzzle.id, puzzle);
-    }
-  }
-
-  const completed: string[] = [];
-
-  for (const puzzle of puzzles.values()) {
-    const totalPieces = puzzle.pieces.length;
-    const completedPieces = puzzle.pieces.filter(
-      (piece) => piece.is_complete,
-    ).length;
-    const earnedThisRun = outcomes.filter(
-      (outcome) =>
-        outcome.loot_box_reward_outcome.reward.puzzle?.id === puzzle.id,
-    ).length;
-
-    if (
-      totalPieces > 0 &&
-      completedPieces === totalPieces &&
-      earnedThisRun > 0 &&
-      completedPieces - earnedThisRun < totalPieces
-    ) {
-      completed.push(puzzle.name);
-    }
-  }
-
-  return completed;
-}
-
-export function formatLootRewardSummary(outcomes: LootBoxRewardResponse[]) {
+function formatLootRewardSummary(outcomes: LootBoxRewardResponse[]) {
   if (outcomes.length === 0) {
-    return "";
+    return undefined;
   }
 
-  const lines = ["", "**You earned**"];
+  const lines = ["**You earned**"];
   const earnedPieces = groupEarnedPieces(outcomes);
 
   for (const [label, count] of earnedPieces) {
@@ -162,14 +107,16 @@ export function formatLootRewardSummary(outcomes: LootBoxRewardResponse[]) {
     lines.push(`- ${prefix}${label} 🧩`);
   }
 
-  const admissionProgress = getAdmissionProgress(outcomes);
-  if (admissionProgress) {
-    lines.push("", admissionProgress);
-  }
-
-  for (const puzzleName of getNewlyCompletedPuzzles(outcomes)) {
-    lines.push("", `🎉 **${puzzleName} puzzle complete!**`);
-  }
-
   return lines.join("\n");
 }
+
+export const lootBoxTask: Task<LootBoxRewardResponse[]> = {
+  name: "Loot Boxes",
+  async run() {
+    await Bun.sleep(LOOT_BOX_SETTLE_DELAY_MS);
+    return redeemAllLootBoxes(() =>
+      postEndUsers<LootBoxRewardResponse>(LOOT_BOX_PATH),
+    );
+  },
+  formatSummary: formatLootRewardSummary,
+};
