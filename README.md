@@ -136,7 +136,7 @@ Once set up, it works like this with no input from you:
 
 The workflow needs permission to update your `TOKEN` secret, which the default GitHub Actions token cannot do.
 
-1. Go to [Settings → Developer settings → Fine-grained tokens → Generate new token](https://github.com/settings/personal-access-tokens/new)**
+1. Go to [Settings → Developer settings → Fine-grained tokens → Generate new token](https://github.com/settings/personal-access-tokens/new)
 2. Fill in:
   - **Token name:** anything, e.g. `cidercade-secret-writer`
   - **Expiration:** your choice, Set it to `No Expiration` to forget about it. When it expires, generate a new one and update the `GH_PAT` secret
