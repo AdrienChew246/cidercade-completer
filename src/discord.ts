@@ -56,6 +56,19 @@ function buildSummaryEmbed(outcomes: TaskOutcome[]) {
 }
 
 export async function postRunSummary(outcomes: TaskOutcome[]) {
+  await postEmbed(buildSummaryEmbed(outcomes));
+}
+
+export async function postTokenExpiredNotice() {
+  await postEmbed({
+    title: "Token Expired",
+    description:
+      "Sending OTP to phone. Run the **Authenticate Cidercade** workflow with the verification SMS.",
+    color: COLOR_FAILURE,
+  });
+}
+
+async function postEmbed(embed: object) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) {
     console.warn(
@@ -67,7 +80,7 @@ export async function postRunSummary(outcomes: TaskOutcome[]) {
   const payload = {
     username: DISCORD_USERNAME,
     avatar_url: DISCORD_AVATAR_URL,
-    embeds: [buildSummaryEmbed(outcomes)],
+    embeds: [embed],
   };
 
   const res = await fetch(webhookUrl, {

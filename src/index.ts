@@ -1,5 +1,5 @@
 import { candyBlastTask } from "./candy-blast";
-import { postRunSummary } from "./discord";
+import { postRunSummary, postTokenExpiredNotice } from "./discord";
 import { lootBoxTask } from "./loot-box";
 import { formatError, isTaskSuccessful, runTask, type Task } from "./task";
 import { wotdTask } from "./wotd";
@@ -83,7 +83,26 @@ export async function getEndUsers<T = unknown>(path: string) {
 
 async function* runSequentially(tasks: Task<unknown>[]) {
   for (const task of tasks) {
-    yield await runTask(task);
+    const outcome = await runTask(task);
+    if (
+      process.env.PHONE_NUMBER &&
+      typeof outcome.status === "object" &&
+      "error" in outcome.status &&
+      outcome.status.error?.includes("Not Authorized")
+    ) {
+      console.log("Not Authorized, sending OTP");
+      try {
+        await postTokenExpiredNotice();
+      } catch (error) {
+        console.error(`Discord notification failed: ${formatError(error)}`);
+      }
+      await postEndUsers("authentication/send-code", {
+        phone: process.env.PHONE_NUMBER,
+        program_slug: "cidercade",
+      });
+      process.exit(1);
+    }
+    yield outcome;
   }
 }
 
@@ -107,4 +126,6 @@ async function main() {
   }
 }
 
-await main();
+if (import.meta.main) {
+  await main();
+}

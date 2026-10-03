@@ -1,0 +1,55 @@
+name: Authenticate Cidercade
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Verification SMS, e.g. "Your Cidercade verification code is: 123456"'
+        required: true
+        type: string
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Extract verification code
+        env:
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          if [[ ! "$MESSAGE" =~ (^|[^0-9])([0-9]{6})([^0-9]|$) ]]; then
+            echo "::error::No six digit verification code found in the message"
+            exit 1
+          fi
+          code="${BASH_REMATCH[2]}"
+          echo "::add-mask::$code"
+          echo "OTP_CODE=$code" >> "$GITHUB_ENV"
+
+      - name: Exchange code for JWT
+        env:
+          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
+        run: |
+          jwt="$(bun run otp)"
+          echo "::add-mask::$jwt"
+          echo "TOKEN=$jwt" >> "$GITHUB_ENV"
+
+      - name: Save JWT to TOKEN secret
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: printf '%s' "$TOKEN" | gh secret set TOKEN --repo "$GITHUB_REPOSITORY"
+
+      - name: Run daily tasks
+        run: bun start
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}

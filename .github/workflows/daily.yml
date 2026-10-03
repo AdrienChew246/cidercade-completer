@@ -26,3 +26,4 @@ jobs:
         env:
           TOKEN: ${{ secrets.TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
