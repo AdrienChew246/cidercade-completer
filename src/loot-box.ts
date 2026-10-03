@@ -1,5 +1,10 @@
 import { postEndUsers } from ".";
-import type { Task } from "./task";
+import {
+  type AdmissionPieceState,
+  PIECES_PER_ADMISSION,
+  updateAdmissionPieces,
+} from "./admission-tracker";
+import { formatError, type Task } from "./task";
 
 const LOOT_BOX_PATH = "loot-boxes/3a623991-6a4e-448e-9a11-40cc53e3b9fb/open";
 /** Loot boxes earned by earlier tasks take a moment to become redeemable. */
@@ -50,6 +55,11 @@ export type LootBoxRewardResponse = {
   rewards: Reward[];
 };
 
+type LootBoxResult = {
+  outcomes: LootBoxRewardResponse[];
+  admissionPieces?: AdmissionPieceState | { error: string };
+};
+
 function isLootBoxUnavailable(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes("Allocated loot box not found or already redeemed");
@@ -94,29 +104,69 @@ function groupEarnedPieces(outcomes: LootBoxRewardResponse[]) {
   return counts;
 }
 
-function formatLootRewardSummary(outcomes: LootBoxRewardResponse[]) {
-  if (outcomes.length === 0) {
-    return undefined;
+function isAdmissionPiece(outcome: LootBoxRewardResponse) {
+  return /admission/i.test(getPieceLabel(outcome.loot_box_reward_outcome));
+}
+
+function formatAdmissionPieces(
+  state: NonNullable<LootBoxResult["admissionPieces"]>,
+) {
+  if ("error" in state) {
+    return `⚠️ Could not update admission piece count: ${state.error}`;
   }
 
-  const lines = ["**You earned**"];
-  const earnedPieces = groupEarnedPieces(outcomes);
+  const admissions = Math.floor(state.count / PIECES_PER_ADMISSION);
+  return [
+    `You have **${state.count}** admission puzzle ${pluralize(state.count, "piece")} (**${admissions}** ${pluralize(admissions, "admission")})`,
+    `**${state.totalEarned}** ${pluralize(state.totalEarned, "piece")} earned in total since tracking started`,
+  ].join("\n");
+}
 
-  for (const [label, count] of earnedPieces) {
+function pluralize(count: number, word: string) {
+  return count === 1 ? word : `${word}s`;
+}
+
+function formatEarnedPieces(outcomes: LootBoxRewardResponse[]) {
+  const lines = ["**You earned**"];
+  for (const [label, count] of groupEarnedPieces(outcomes)) {
     const prefix = count > 1 ? `${count}x ` : "";
     lines.push(`- ${prefix}${label} 🧩`);
   }
-
   return lines.join("\n");
 }
 
-export const lootBoxTask: Task<LootBoxRewardResponse[]> = {
+function formatLootRewardSummary({ outcomes, admissionPieces }: LootBoxResult) {
+  const sections: string[] = [];
+
+  if (outcomes.length > 0) {
+    sections.push(formatEarnedPieces(outcomes));
+  }
+
+  if (admissionPieces) {
+    sections.push(formatAdmissionPieces(admissionPieces));
+  }
+
+  return sections.length > 0 ? sections.join("\n\n") : undefined;
+}
+
+async function trackAdmissionPieces(outcomes: LootBoxRewardResponse[]) {
+  try {
+    return await updateAdmissionPieces(outcomes.filter(isAdmissionPiece).length);
+  } catch (error) {
+    const message = formatError(error);
+    console.error(`[Admission pieces] ${message}`);
+    return { error: message };
+  }
+}
+
+export const lootBoxTask: Task<LootBoxResult> = {
   name: "Loot Boxes",
   async run() {
     await Bun.sleep(LOOT_BOX_SETTLE_DELAY_MS);
-    return redeemAllLootBoxes(() =>
+    const outcomes = await redeemAllLootBoxes(() =>
       postEndUsers<LootBoxRewardResponse>(LOOT_BOX_PATH),
     );
+    return { outcomes, admissionPieces: await trackAdmissionPieces(outcomes) };
   },
   formatSummary: formatLootRewardSummary,
 };
