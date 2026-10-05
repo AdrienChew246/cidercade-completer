@@ -2,8 +2,8 @@ name: Daily Cidercade
 
 on:
   schedule:
-    # 14:00 UTC - 9 AM CT / 8 AM CST
-    - cron: "0 14 * * *"
+    # 04:06 UTC - 11:06 PM CDT
+    - cron: "6 4 * * *"
   workflow_dispatch:
 
 concurrency: cidercade
