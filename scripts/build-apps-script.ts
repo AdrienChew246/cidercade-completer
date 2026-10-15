@@ -25,9 +25,9 @@ if (!bundle) {
   throw new Error(`Bundling ${ENTRY} produced no output`);
 }
 
-// Apps Script only finds triggers, menu items and doPost through top-level
-// function declarations, so each export gets one forwarding into the bundle.
-// Source order is kept because the editor preselects the first function.
+// Apps Script only finds triggers, menu items and form handlers through
+// top-level function declarations, so each export gets one forwarding into
+// the bundle. Source order is kept because the editor preselects the first.
 const exports = Array.from(
   (await Bun.file(FUNCTIONS).text()).matchAll(
     /^export (?:async )?function (\w+)/gm,

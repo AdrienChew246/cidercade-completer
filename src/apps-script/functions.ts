@@ -5,19 +5,26 @@ import {
   exchangeVerificationCode,
   extractVerificationCode,
   formatPhoneNumber,
-  sendVerificationCode,
 } from "@/hang";
 import { formatError } from "@/tasks";
-import { renderEndpointTemplate } from "./endpoint-page" with { type: "macro" };
+import { renderSetupDialog } from "./setup-dialog" with { type: "macro" };
+import {
+  INITIAL_FORM_ID,
+  type SetupErrors,
+  type SetupForm,
+  type SetupResult,
+} from "./setup-dialog/shared";
 
 // Apps Script refers to these by name, so they must match the exports below.
 const RUN_DAILY_TASKS = "runDailyTasks";
 const SET_UP = "setUp";
 const PROMPT_VERIFICATION_MESSAGE = "promptVerificationMessage";
+const ON_FORM_SUBMIT = "onFormSubmit";
 
-const TITLE = "Cidercade";
+const TITLE = "Cidercade Completer";
+const VERIFICATION_QUESTION = "Verification SMS";
 const DAILY_RUN_HOUR = 0;
-const ENDPOINT_TEMPLATE = renderEndpointTemplate();
+const SETUP_DIALOG_HTML = renderSetupDialog();
 const DISCORD_WEBHOOK_PATTERN =
   /^https:\/\/(?:\w+\.)?discord(?:app)?\.com\/api\/webhooks\//;
 
@@ -42,84 +49,169 @@ function scheduleDailyRun() {
     .create();
 }
 
+function scheduleFormSubmit() {
+  const form = FormApp.getActiveForm();
+  for (const trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction() === ON_FORM_SUBMIT) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+
+  ScriptApp.newTrigger(ON_FORM_SUBMIT).forForm(form).onFormSubmit().create();
+}
+
+type PublishableForm = GoogleAppsScript.Forms.Form & {
+  supportsAdvancedResponderPermissions(): boolean;
+  setPublished(enabled: boolean): GoogleAppsScript.Forms.Form;
+};
+
+/** Ensure the bound form can receive verification codes from a Shortcut. */
+function prepareVerificationForm() {
+  const form = FormApp.getActiveForm() as PublishableForm;
+  form.setTitle(TITLE);
+  form.setDescription(
+    "Paste a Cidercade verification SMS here, or point your phone automation at the Shortcut URL from Cidercade → Set up.",
+  );
+
+  const existing =
+    form
+      .getItems(FormApp.ItemType.TEXT)
+      .find((entry) => entry.getTitle() === VERIFICATION_QUESTION) ??
+    form.getItems(FormApp.ItemType.TEXT)[0] ??
+    form.getItems(FormApp.ItemType.PARAGRAPH_TEXT)[0];
+
+  const item = (
+    existing
+      ? existing
+          .setTitle(VERIFICATION_QUESTION)
+          .setHelpText(
+            "Paste the full verification text, or only the six digit code.",
+          )
+      : form
+          .addTextItem()
+          .setTitle(VERIFICATION_QUESTION)
+          .setHelpText(
+            "Paste the full verification text, or only the six digit code.",
+          )
+          .setRequired(true)
+  ) as GoogleAppsScript.Forms.Item;
+
+  if (form.supportsAdvancedResponderPermissions()) {
+    form.setPublished(true);
+  }
+  form.setAcceptingResponses(true);
+  try {
+    form.setRequireLogin(false);
+  } catch {
+    // Consumer accounts often disallow this call; anonymous access still works.
+  }
+  try {
+    form.setCollectEmail(false);
+  } catch {
+    // Older forms may not allow changing this after responses exist.
+  }
+
+  // item.getId() is NOT the entry.XXXX used in formResponse URLs. A prefilled
+  // URL is the reliable way to get the real field name Shortcuts need.
+  const itemResponse =
+    item.getType() === FormApp.ItemType.PARAGRAPH_TEXT
+      ? item.asParagraphTextItem().createResponse("x")
+      : item.asTextItem().createResponse("x");
+  const prefilledUrl = form
+    .createResponse()
+    .withItemResponse(itemResponse)
+    .toPrefilledUrl();
+  const entryField = prefilledUrl.match(/[?&](entry\.\d+)=/)?.[1];
+  if (!entryField) {
+    throw new Error("Could not find the form entry field for the Shortcut URL");
+  }
+  // Keep entry= last so Shortcuts can append the URL-encoded SMS.
+  const formResponseUrl = prefilledUrl
+    .replace(/\/viewform.*/i, "/formResponse")
+    .split("?")[0];
+  return {
+    shortcutUrl: `${formResponseUrl}?usp=pp_url&submit=Submit&${entryField}=`,
+  };
+}
+
 /** Resolves to `undefined` when the dialog is cancelled. */
 function ask(prompt: string) {
-  const ui = SpreadsheetApp.getUi();
+  const ui = FormApp.getUi();
   const response = ui.prompt(TITLE, prompt, ui.ButtonSet.OK_CANCEL);
   if (response.getSelectedButton() !== ui.Button.OK) return undefined;
   return response.getResponseText().trim();
 }
 
-function askPhoneNumber(current: string | null) {
-  const countryCodeHint = "Start with + and the country code outside the US.";
-  let prompt = current
-    ? `Phone number for your Cidercade account (leave blank to keep ${current}). ${countryCodeHint}`
-    : `Phone number for your Cidercade account. ${countryCodeHint}`;
-
-  while (true) {
-    const answer = ask(prompt);
-    if (answer === undefined) return undefined;
-    if (!answer && current) return current;
-
-    const phone = formatPhoneNumber(answer);
-    if (phone) return phone;
-    prompt = `"${answer}" is not a valid phone number. ${countryCodeHint} Try again:`;
-  }
+function runInBackground(task: Promise<unknown>, description: string) {
+  task.catch((error) => {
+    console.error(`${description} failed: ${formatError(error)}`);
+  });
 }
 
-/** Resolves to an empty string when Discord notifications are skipped. */
-function askDiscordWebhookUrl(current: string | null) {
-  let prompt = current
-    ? "Discord webhook URL for run summaries (leave blank to keep the current one):"
-    : "Discord webhook URL for run summaries (optional, leave blank to skip):";
-
-  while (true) {
-    const answer = ask(prompt);
-    if (answer === undefined) return undefined;
-    if (!answer) return current ?? "";
-
-    if (DISCORD_WEBHOOK_PATTERN.test(answer)) return answer;
-    prompt =
-      "That is not a Discord webhook URL. It should start with https://discord.com/api/webhooks/. Try again:";
-  }
+export function setUp() {
+  const properties = PropertiesService.getScriptProperties();
+  const initialForm: SetupForm = {
+    phone: properties.getProperty("PHONE_NUMBER") ?? "",
+    webhookUrl: properties.getProperty("DISCORD_WEBHOOK_URL") ?? "",
+  };
+  // Escaping "<" keeps the JSON from closing its script tag.
+  const json = JSON.stringify(initialForm).replaceAll("<", "\\u003c");
+  const html = HtmlService.createHtmlOutput(
+    `<script type="application/json" id="${INITIAL_FORM_ID}">${json}</script>${SETUP_DIALOG_HTML}`,
+  )
+    .setWidth(460)
+    .setHeight(360);
+  FormApp.getUi().showModalDialog(html, `${TITLE} setup`);
 }
 
-export async function setUp() {
+/** Called by the setup dialog. */
+export function saveSetup(form: SetupForm): SetupResult {
+  const phone = formatPhoneNumber(form.phone);
+  const webhookUrl = form.webhookUrl.trim();
+  const errors: SetupErrors = {};
+  if (!phone) {
+    errors.phone =
+      "Enter a 10 digit number, or + and the country code outside the US.";
+  }
+  if (webhookUrl && !DISCORD_WEBHOOK_PATTERN.test(webhookUrl)) {
+    errors.webhookUrl =
+      "Discord webhook URLs start with https://discord.com/api/webhooks/.";
+  }
+  if (!phone || errors.webhookUrl) {
+    return { status: "invalid", errors };
+  }
+
   const properties = PropertiesService.getScriptProperties();
   const previousPhone = properties.getProperty("PHONE_NUMBER");
-
-  const phone = askPhoneNumber(previousPhone);
-  if (!phone) return;
-  const webhookUrl = askDiscordWebhookUrl(
-    properties.getProperty("DISCORD_WEBHOOK_URL"),
-  );
-  if (webhookUrl === undefined) return;
-
   properties.setProperty("PHONE_NUMBER", phone);
   if (webhookUrl) {
     properties.setProperty("DISCORD_WEBHOOK_URL", webhookUrl);
+  } else {
+    properties.deleteProperty("DISCORD_WEBHOOK_URL");
   }
   // A token only works for the account it was issued to.
   if (phone !== previousPhone) {
     properties.deleteProperty("TOKEN");
   }
-  scheduleDailyRun();
 
+  const relay = prepareVerificationForm();
+  scheduleDailyRun();
+  scheduleFormSubmit();
+
+  const schedule = `Daily tasks will run every day around ${DAILY_RUN_HOUR}:00.`;
   if (properties.getProperty("TOKEN")) {
-    SpreadsheetApp.getActive().toast(
-      `Daily tasks will run every day around ${DAILY_RUN_HOUR}:00.`,
-      TITLE,
-    );
-    return;
+    return {
+      status: "saved",
+      message: `Saved. ${schedule}`,
+      ...relay,
+    };
   }
 
-  await sendVerificationCode(phone);
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(
-    TITLE,
-    `A verification code was texted to ${phone}. Your phone automation will forward it, or click ${TITLE} → Authenticate and paste the text. Daily tasks will then run every day around ${DAILY_RUN_HOUR}:00.`,
-    ui.ButtonSet.OK,
-  );
+  return {
+    status: "saved",
+    message: `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}`,
+    ...relay,
+  };
 }
 
 async function authenticate(code: string) {
@@ -142,49 +234,39 @@ export async function promptVerificationMessage() {
   await authenticate(extractVerificationCode(message));
 }
 
+/** Installable trigger: verification SMS posted to this form. */
+export function onFormSubmit(
+  event?: GoogleAppsScript.Events.FormsOnFormSubmit,
+) {
+  if (!event) {
+    throw new Error(
+      `onFormSubmit only handles form submissions. Run ${RUN_DAILY_TASKS} instead.`,
+    );
+  }
+
+  const response = event.response;
+  const message = response
+    .getItemResponses()
+    .map((item) => String(item.getResponse()))
+    .join(" ");
+
+  try {
+    FormApp.getActiveForm().deleteResponse(response.getId());
+  } catch (error) {
+    console.error(`Could not delete form response: ${formatError(error)}`);
+  }
+
+  runInBackground(
+    authenticate(extractVerificationCode(message)),
+    "Authentication",
+  );
+}
+
 export function onOpen() {
-  SpreadsheetApp.getUi()
+  FormApp.getUi()
     .createMenu(TITLE)
     .addItem("Set up", SET_UP)
     .addItem("Run daily tasks", RUN_DAILY_TASKS)
-    .addItem("Authenticate", PROMPT_VERIFICATION_MESSAGE)
+    .addItem("Manually Authenticate OTP", PROMPT_VERIFICATION_MESSAGE)
     .addToUi();
-
-  if (!PropertiesService.getScriptProperties().getProperty("PHONE_NUMBER")) {
-    SpreadsheetApp.getActive().toast(
-      "Click Cidercade → Set up to get started.",
-      TITLE,
-      -1,
-    );
-  }
-}
-
-export function doGet() {
-  const template = HtmlService.createTemplate(ENDPOINT_TEMPLATE);
-  template.url = ScriptApp.getService().getUrl();
-  return template
-    .evaluate()
-    .setTitle(TITLE)
-    .addMetaTag("viewport", "width=device-width, initial-scale=1");
-}
-
-/** Web app endpoint for phone automations that forward the verification SMS. */
-export function doPost(event?: GoogleAppsScript.Events.DoPost) {
-  if (!event) {
-    throw new Error(
-      `doPost only handles web app requests. Run ${RUN_DAILY_TASKS} instead.`,
-    );
-  }
-
-  const message = event.parameter.message ?? event.postData?.contents ?? "";
-  const code = extractVerificationCode(message);
-
-  // A web app must return its response synchronously.
-  authenticate(code).catch((error) => {
-    console.error(`Authentication failed: ${formatError(error)}`);
-  });
-
-  return ContentService.createTextOutput(
-    "Verification code received. Running daily tasks.",
-  );
 }
