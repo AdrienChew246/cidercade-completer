@@ -1,4 +1,4 @@
-import { postEndUsers } from "..";
+import { postEndUsers } from "../api";
 import { type GameResult, markAlreadyCompleted, type Task } from "../task";
 import { getBestGuess } from "./solver";
 export type LetterDelta = {

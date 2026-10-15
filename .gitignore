@@ -25,6 +25,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # local admission piece tracking state
 .admission-pieces.json
 
+# per-user Apps Script project created by `clasp create`
+.clasp.json
+
 # caches
 .eslintcache
 .cache

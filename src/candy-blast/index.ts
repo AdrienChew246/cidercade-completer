@@ -1,4 +1,5 @@
-import { getEndUsers } from "..";
+import { sleep } from "#runtime";
+import { getEndUsers } from "../api";
 import { type GameResult, markAlreadyCompleted, type Task } from "../task";
 import {
   DEFAULT_PROJECT_ID,
@@ -60,11 +61,33 @@ async function pollNewCandyBlastUrl(previousUrl: string) {
       );
     }
 
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    await sleep(POLL_INTERVAL_MS);
     game = await fetchCandyBlast();
   }
 
   return game;
+}
+
+/** Apps Script has no `URL`/`URLSearchParams`. */
+function getSearchParams(url: string) {
+  const query = url.split("#")[0]?.split("?")[1] ?? "";
+  const params = new Map<string, string>();
+
+  for (const pair of query.split("&")) {
+    if (!pair) continue;
+    const separator = pair.indexOf("=");
+    const [key, value] =
+      separator === -1
+        ? [pair, ""]
+        : [pair.slice(0, separator), pair.slice(separator + 1)];
+    params.set(decodeQueryComponent(key), decodeQueryComponent(value));
+  }
+
+  return params;
+}
+
+function decodeQueryComponent(component: string) {
+  return decodeURIComponent(component.replace(/\+/g, " "));
 }
 
 export async function completeLevels(): Promise<GameResult<CandyBlastGame>> {
@@ -75,13 +98,13 @@ export async function completeLevels(): Promise<GameResult<CandyBlastGame>> {
   }
 
   while (!game.completed) {
-    const url = new URL(game.url);
+    const searchParams = getSearchParams(game.url);
 
-    const token = url.searchParams.get("token") ?? "";
-    const game_id = url.searchParams.get("game_id") ?? "";
-    const brand_id = url.searchParams.get("brand_id") ?? "";
-    const campaign_id = url.searchParams.get("campaign_id") ?? "";
-    const level_number = url.searchParams.get("level_number") ?? "";
+    const token = searchParams.get("token") ?? "";
+    const game_id = searchParams.get("game_id") ?? "";
+    const brand_id = searchParams.get("brand_id") ?? "";
+    const campaign_id = searchParams.get("campaign_id") ?? "";
+    const level_number = searchParams.get("level_number") ?? "";
 
     const { access_token } = await postGame("start", {
       project_id: DEFAULT_PROJECT_ID,

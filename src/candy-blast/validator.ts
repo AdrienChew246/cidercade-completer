@@ -1,4 +1,6 @@
+import { Buffer } from "node:buffer";
 import { Blowfish } from "egoroof-blowfish";
+import { request } from "#runtime";
 
 /** Base64-encoded Blowfish key from game.js (`ig.Validator` vsk). */
 export const CANDY_BLAST_HANG_VSK =
@@ -92,13 +94,11 @@ export interface DecryptOptions {
   sk?: string;
 }
 
-function decodeKey(keyBase64: string): string {
-  return Buffer.from(keyBase64, "base64").toString("ascii");
-}
-
+// Blowfish is only given bytes because it converts strings with
+// TextEncoder/TextDecoder, which Apps Script lacks.
 function createCipher(keyBase64: string): Blowfish {
   return new Blowfish(
-    decodeKey(keyBase64),
+    Buffer.from(keyBase64, "base64"),
     Blowfish.MODE.ECB,
     Blowfish.PADDING.NULL,
   );
@@ -109,7 +109,9 @@ export function blowfishEncryptBase64(
   plaintext: string,
   keyBase64: string,
 ): string {
-  const encrypted = createCipher(keyBase64).encode(plaintext);
+  const encrypted = createCipher(keyBase64).encode(
+    Buffer.from(plaintext, "utf8"),
+  );
   return Buffer.from(encrypted).toString("base64");
 }
 
@@ -120,9 +122,9 @@ export function blowfishDecryptBase64(
 ): string {
   const decrypted = createCipher(keyBase64).decode(
     Buffer.from(ciphertextBase64, "base64"),
-    Blowfish.TYPE.STRING,
+    Blowfish.TYPE.UINT8_ARRAY,
   );
-  return decrypted.replace(/\0+$/g, "");
+  return Buffer.from(decrypted).toString("utf8").replace(/\0+$/g, "");
 }
 
 /** Content-Type used by `ig.Validator.callXHR` / `getContentType`. */
@@ -291,7 +293,7 @@ export async function postGame<T extends keyof ValidatorPayloadMap>(
   payload: ValidatorPayloadMap[T],
   bearerToken?: string,
 ): Promise<ValidatorReponseMap[T]> {
-  const res = await fetch(new URL(path, VALIDATOR_BASE_URL), {
+  const res = await request(`${VALIDATOR_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "User-Agent":
