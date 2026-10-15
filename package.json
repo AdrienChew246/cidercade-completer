@@ -5,7 +5,9 @@
     "@biomejs/biome": "2.5.1",
     "@google/clasp": "^3.4.1",
     "@types/bun": "latest",
-    "@types/google-apps-script": "^2.0.13"
+    "@types/google-apps-script": "^2.0.13",
+    "preact": "^11.0.1",
+    "preact-render-to-string": "^6.8.1"
   },
   "peerDependencies": {
     "typescript": "^5"

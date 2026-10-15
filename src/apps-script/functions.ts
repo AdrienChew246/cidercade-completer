@@ -8,7 +8,7 @@ import {
   sendVerificationCode,
 } from "@/hang";
 import { formatError } from "@/tasks";
-import { renderEndpointPage } from "./endpoint-page";
+import { renderEndpointTemplate } from "./endpoint-page" with { type: "macro" };
 
 // Apps Script refers to these by name, so they must match the exports below.
 const RUN_DAILY_TASKS = "runDailyTasks";
@@ -17,6 +17,7 @@ const PROMPT_VERIFICATION_MESSAGE = "promptVerificationMessage";
 
 const TITLE = "Cidercade";
 const DAILY_RUN_HOUR = 0;
+const ENDPOINT_TEMPLATE = renderEndpointTemplate();
 const DISCORD_WEBHOOK_PATTERN =
   /^https:\/\/(?:\w+\.)?discord(?:app)?\.com\/api\/webhooks\//;
 
@@ -159,9 +160,10 @@ export function onOpen() {
 }
 
 export function doGet() {
-  return HtmlService.createHtmlOutput(
-    renderEndpointPage(ScriptApp.getService().getUrl()),
-  )
+  const template = HtmlService.createTemplate(ENDPOINT_TEMPLATE);
+  template.url = ScriptApp.getService().getUrl();
+  return template
+    .evaluate()
     .setTitle(TITLE)
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
