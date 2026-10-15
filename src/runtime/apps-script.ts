@@ -4,7 +4,7 @@ import type { HttpRequest, HttpResponse, StateStore } from "./types";
 type HttpMethod = NonNullable<HttpRequest["method"]>;
 
 export const AUTHENTICATE_INSTRUCTIONS =
-  "Submit the verification SMS to your Cidercade form (phone automation or the form itself), or use **Cidercade → Authenticate** in the form editor.";
+  "Submit the verification SMS to your Cidercade form (phone automation or paste it into the form and submit).";
 
 export function getEnv(name: string) {
   return PropertiesService.getScriptProperties().getProperty(name) ?? undefined;

@@ -18,7 +18,6 @@ import {
 // Apps Script refers to these by name, so they must match the exports below.
 const RUN_DAILY_TASKS = "runDailyTasks";
 const SET_UP = "setUp";
-const PROMPT_VERIFICATION_MESSAGE = "promptVerificationMessage";
 const ON_FORM_SUBMIT = "onFormSubmit";
 
 const TITLE = "Cidercade Completer";
@@ -80,19 +79,16 @@ function prepareVerificationForm() {
     form.getItems(FormApp.ItemType.TEXT)[0] ??
     form.getItems(FormApp.ItemType.PARAGRAPH_TEXT)[0];
 
+  const helpText =
+    "This field acts as a endpoint for token refresh. Your mobile device should automatically send the SMS to this form, so you do not need to fill this out unless you are manually authenticating.";
+
   const item = (
     existing
-      ? existing
-          .setTitle(VERIFICATION_QUESTION)
-          .setHelpText(
-            "Paste the full verification text, or only the six digit code.",
-          )
+      ? existing.setTitle(VERIFICATION_QUESTION).setHelpText(helpText)
       : form
           .addTextItem()
           .setTitle(VERIFICATION_QUESTION)
-          .setHelpText(
-            "Paste the full verification text, or only the six digit code.",
-          )
+          .setHelpText(helpText)
           .setRequired(true)
   ) as GoogleAppsScript.Forms.Item;
 
@@ -132,14 +128,6 @@ function prepareVerificationForm() {
   return {
     shortcutUrl: `${formResponseUrl}?usp=pp_url&submit=Submit&${entryField}=`,
   };
-}
-
-/** Resolves to `undefined` when the dialog is cancelled. */
-function ask(prompt: string) {
-  const ui = FormApp.getUi();
-  const response = ui.prompt(TITLE, prompt, ui.ButtonSet.OK_CANCEL);
-  if (response.getSelectedButton() !== ui.Button.OK) return undefined;
-  return response.getResponseText().trim();
 }
 
 function runInBackground(task: Promise<unknown>, description: string) {
@@ -225,15 +213,6 @@ async function authenticate(code: string) {
   await runDailyTasks();
 }
 
-export async function promptVerificationMessage() {
-  const message = ask(
-    "Paste the Cidercade verification SMS you were texted, or its six digit code:",
-  );
-  if (message === undefined) return;
-
-  await authenticate(extractVerificationCode(message));
-}
-
 /** Installable trigger: verification SMS posted to this form. */
 export function onFormSubmit(
   event?: GoogleAppsScript.Events.FormsOnFormSubmit,
@@ -267,6 +246,5 @@ export function onOpen() {
     .createMenu(TITLE)
     .addItem("Set up", SET_UP)
     .addItem("Run daily tasks", RUN_DAILY_TASKS)
-    .addItem("Manually Authenticate OTP", PROMPT_VERIFICATION_MESSAGE)
     .addToUi();
 }
