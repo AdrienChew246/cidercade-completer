@@ -27,8 +27,12 @@ if (!bundle) {
 
 // Apps Script only finds triggers, menu items and doPost through top-level
 // function declarations, so each export gets one forwarding into the bundle.
-const { exports } = new Bun.Transpiler({ loader: "ts" }).scan(
-  await Bun.file(FUNCTIONS).text(),
+// Source order is kept because the editor preselects the first function.
+const exports = Array.from(
+  (await Bun.file(FUNCTIONS).text()).matchAll(
+    /^export (?:async )?function (\w+)/gm,
+  ),
+  ([, name]) => name,
 );
 const declarations = exports.map(
   (name) =>
