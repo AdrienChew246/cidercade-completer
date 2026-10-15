@@ -1,7 +1,8 @@
 /// <reference types="google-apps-script" />
-import { exchangeVerificationCode, extractVerificationCode } from "../auth";
-import * as daily from "../daily";
-import { formatError } from "../task";
+
+import * as daily from "@/daily";
+import { exchangeVerificationCode, extractVerificationCode } from "@/hang";
+import { formatError } from "@/tasks";
 
 // Apps Script refers to these by name, so they must match the exports below.
 const RUN_DAILY_TASKS = "runDailyTasks";

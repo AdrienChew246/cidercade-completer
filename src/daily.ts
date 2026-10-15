@@ -1,16 +1,16 @@
 import { getEnv } from "#runtime";
-import { sendVerificationCode } from "./auth";
-import { candyBlastTask } from "./candy-blast";
 import { postInvalidTokenNotice, postRunSummary } from "./discord";
-import { lootBoxTask } from "./loot-box";
+import { sendVerificationCode } from "./hang";
 import {
   formatError,
   isTaskSuccessful,
   runTask,
   type Task,
   type TaskOutcome,
-} from "./task";
-import { wotdTask } from "./wotd";
+} from "./tasks";
+import { candyBlastTask } from "./tasks/candy-blast";
+import { lootBoxTask } from "./tasks/loot-box";
+import { wotdTask } from "./tasks/wotd";
 
 const TASKS: Task<unknown>[] = [wotdTask, candyBlastTask, lootBoxTask];
 

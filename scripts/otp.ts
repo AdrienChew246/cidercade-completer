@@ -1,4 +1,4 @@
-import { exchangeVerificationCode } from "./auth";
+import { exchangeVerificationCode, extractVerificationCode } from "@/hang";
 
 function requireEnv(name: string) {
   const value = process.env[name];
@@ -10,7 +10,7 @@ function requireEnv(name: string) {
 
 const jwt = await exchangeVerificationCode(
   requireEnv("PHONE_NUMBER"),
-  requireEnv("OTP_CODE"),
+  extractVerificationCode(requireEnv("VERIFICATION_MESSAGE")),
 );
 
 // stdout is captured by the workflow, so nothing else may be printed here.

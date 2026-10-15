@@ -1,7 +1,7 @@
 import assert from "node:assert";
 
-import type { LetterDelta, WOTDAttempt } from "../src/wotd";
-import { getBestGuess } from "../src/wotd/solver";
+import type { LetterDelta, WOTDAttempt } from "@/tasks/wotd";
+import { getBestGuess } from "@/tasks/wotd/solver";
 
 const MAX_GUESSES = 6;
 

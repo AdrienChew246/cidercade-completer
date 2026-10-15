@@ -1,6 +1,6 @@
 import { sleep } from "#runtime";
-import { getEndUsers } from "../api";
-import { type GameResult, markAlreadyCompleted, type Task } from "../task";
+import { getEndUsers } from "@/hang";
+import { type GameResult, markAlreadyCompleted, type Task } from "@/tasks";
 import {
   DEFAULT_PROJECT_ID,
   DEFAULT_VALIDATOR_ID,

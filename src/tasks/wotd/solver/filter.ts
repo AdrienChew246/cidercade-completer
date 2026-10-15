@@ -1,4 +1,4 @@
-import type { WOTDAttempt } from "..";
+import type { WOTDAttempt } from "@/tasks/wotd";
 import {
   attemptToGuess,
   deltasToPattern,

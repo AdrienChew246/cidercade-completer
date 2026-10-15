@@ -12,7 +12,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "otp": "bun run src/otp.ts",
+    "otp": "bun run scripts/otp.ts",
     "gs:build": "bun run scripts/build-apps-script.ts",
     "gs:push": "bun run gs:build && clasp push --force",
     "test:wotd-solver": "bun run scripts/test-wotd-solver.ts"

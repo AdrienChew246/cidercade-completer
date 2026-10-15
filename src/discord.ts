@@ -1,5 +1,5 @@
 import { AUTHENTICATE_INSTRUCTIONS, getEnv, request } from "#runtime";
-import { isTaskSuccessful, type TaskOutcome } from "./task";
+import { isTaskSuccessful, type TaskOutcome } from "./tasks";
 
 const DISCORD_USERNAME = "Cidercade";
 const DISCORD_AVATAR_URL =

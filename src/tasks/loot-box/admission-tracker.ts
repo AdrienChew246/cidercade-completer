@@ -1,5 +1,5 @@
 import { getStateStore } from "#runtime";
-import { getEndUsers } from "./api";
+import { getEndUsers } from "@/hang";
 
 export const PIECES_PER_ADMISSION = 4;
 
