@@ -3,6 +3,7 @@
   "module": "index.ts",
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
+    "@google/clasp": "^3.4.1",
     "@types/bun": "latest"
   },
   "peerDependencies": {
