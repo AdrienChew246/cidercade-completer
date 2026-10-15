@@ -82,9 +82,35 @@ type AuthenticateCodeResponse = {
   program_membership_id: string;
 };
 
+/**
+ * Formats +1 numbers as "(512) 555-0123" and all others as "+<country code><number>".
+ * Ten digit numbers without a country code are assumed to be +1.
+ * Resolves to `undefined` when `input` is not a valid phone number.
+ */
+export function formatPhoneNumber(input: string) {
+  const digits = input.replace(/\D/g, "");
+  const hasCountryCode = input.trim().startsWith("+") || digits.length > 10;
+  const international = hasCountryCode ? digits : `1${digits}`;
+
+  if (international.startsWith("1")) {
+    const parts = international.match(/^1(\d{3})(\d{3})(\d{4})$/);
+    return parts ? `(${parts[1]}) ${parts[2]}-${parts[3]}` : undefined;
+  }
+
+  return /^\d{7,15}$/.test(international) ? `+${international}` : undefined;
+}
+
+function requirePhoneNumber(phone: string) {
+  const formatted = formatPhoneNumber(phone);
+  if (!formatted) {
+    throw new Error(`"${phone}" is not a valid phone number`);
+  }
+  return formatted;
+}
+
 export async function sendVerificationCode(phone: string) {
   await postEndUsers("authentication/send-code", {
-    phone,
+    phone: requirePhoneNumber(phone),
     program_slug: "cidercade",
   });
 }
@@ -95,7 +121,7 @@ export async function exchangeVerificationCode(phone: string, code: string) {
     "authentication/authenticate-code",
     {
       code,
-      phone,
+      phone: requirePhoneNumber(phone),
       program_slug: "cidercade",
       contract_chain_id: 137,
     },
