@@ -27,8 +27,14 @@ import {
 const RUN_DAILY_TASKS = "runDailyTasks";
 const SET_UP = "setUp";
 const ON_FORM_SUBMIT = "onFormSubmit";
+const CHECK_FOR_UPDATES = "checkForUpdates";
 
 const TITLE = "Cidercade Completer";
+
+/** Provided by updater.gs (not part of the bundled cidercade object). */
+declare function cidercadeMaybeUpdate_(options?: {
+  force?: boolean;
+}): { updated: boolean; version: string; tag?: string };
 const VERIFICATION_QUESTION = "Verification SMS";
 const VERIFICATION_FORM_ID = "VERIFICATION_FORM_ID";
 const VERIFICATION_SHORTCUT_URL = "VERIFICATION_SHORTCUT_URL";
@@ -65,6 +71,11 @@ function clearWebhookAppearance(
 
 // The editor's Run button defaults to the first function, so keep this first.
 export async function runDailyTasks() {
+  try {
+    cidercadeMaybeUpdate_();
+  } catch (error) {
+    console.error(`Update check failed: ${formatError(error)}`);
+  }
   if (!(await daily.runDailyTasks())) {
     throw new Error("Some daily tasks failed");
   }
@@ -266,6 +277,14 @@ function runInBackground(task: Promise<unknown>, description: string) {
 }
 
 export function setUp() {
+  const update = cidercadeMaybeUpdate_();
+  if (update.updated) {
+    DocumentApp.getUi().alert(
+      `Cidercade Completer was updated to ${update.tag ?? update.version}. Open Set up again to use the new version.`,
+    );
+    return;
+  }
+
   const properties = PropertiesService.getScriptProperties();
   const initialForm: SetupDialogInitial = {
     phone: properties.getProperty("PHONE_NUMBER") ?? "",
@@ -449,5 +468,6 @@ export function onOpen() {
     .createMenu(TITLE)
     .addItem("Set up", SET_UP)
     .addItem("Run daily tasks", RUN_DAILY_TASKS)
+    .addItem("Check for updates", CHECK_FOR_UPDATES)
     .addToUi();
 }

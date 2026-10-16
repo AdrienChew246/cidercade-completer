@@ -2,15 +2,14 @@ import { rm } from "node:fs/promises";
 
 const ENTRY = "src/apps-script/index.ts";
 const FUNCTIONS = "src/apps-script/functions.ts";
-const LOADER = "src/apps-script/loader.gs";
+const UPDATER = "src/apps-script/updater.gs";
 const MANIFEST = "src/apps-script/appsscript.json";
 const PACKAGE_JSON = "package.json";
 const OUT_DIR = "dist/apps-script";
 const GLOBAL_NAME = "cidercade";
 const GITHUB_REPO = "dylan-dang/cidercade-completer";
-const RELEASE_ASSET = "cidercade-apps-script.js";
-/** Simple triggers cannot call UrlFetchApp. */
-const NO_UPDATE = new Set(["onOpen"]);
+/** JSON payload consumed by updater.gs (Apps Script API updateContent). */
+const RELEASE_ASSET = "cidercade-apps-script.json";
 
 const result = await Bun.build({
   entrypoints: [ENTRY],
@@ -50,29 +49,33 @@ if (!version) {
 }
 
 const forwarders = exports
-  .map((name) => {
-    const allowUpdate = NO_UPDATE.has(name) ? "false" : "true";
-    return (
-      `function ${name}(...args) {\n` +
-      `  return loadCidercade(${allowUpdate}).${name}(...args);\n` +
-      `}`
-    );
-  })
+  .map(
+    (name) =>
+      `function ${name}(...args) {\n  return ${GLOBAL_NAME}.${name}(...args);\n}`,
+  )
   .join("\n\n");
 
-const loader = (await Bun.file(LOADER).text())
-  .replaceAll("__CIDERCADE_EMBEDDED_VERSION__", version)
+const cidercadeSource = [bundleText, forwarders].join("\n");
+const manifestSource = await Bun.file(MANIFEST).text();
+const updaterSource = (await Bun.file(UPDATER).text())
+  .replaceAll("__CIDERCADE_VERSION__", version)
   .replaceAll("__CIDERCADE_GITHUB_REPO__", GITHUB_REPO)
-  .replaceAll("__CIDERCADE_RELEASE_ASSET__", RELEASE_ASSET)
-  .replaceAll("__CIDERCADE_FORWARDERS__", forwarders);
+  .replaceAll("__CIDERCADE_RELEASE_ASSET__", RELEASE_ASSET);
+
+const releasePayload = {
+  version,
+  files: [
+    { name: "appsscript", type: "JSON", source: manifestSource },
+    { name: "updater", type: "SERVER_JS", source: updaterSource },
+    { name: "cidercade", type: "SERVER_JS", source: cidercadeSource },
+  ],
+};
 
 await rm(OUT_DIR, { recursive: true, force: true });
-// Embedded fallback for clasp; release asset lives beside OUT_DIR so clasp
-// does not push it into the Apps Script project.
-await Bun.write(`${OUT_DIR}/${GLOBAL_NAME}.gs`, bundleText);
-await Bun.write(`${OUT_DIR}/loader.gs`, loader);
-await Bun.write(`${OUT_DIR}/appsscript.json`, Bun.file(MANIFEST));
-await Bun.write(`dist/${RELEASE_ASSET}`, bundleText);
+await Bun.write(`${OUT_DIR}/${GLOBAL_NAME}.gs`, cidercadeSource);
+await Bun.write(`${OUT_DIR}/updater.gs`, updaterSource);
+await Bun.write(`${OUT_DIR}/appsscript.json`, manifestSource);
+await Bun.write(`dist/${RELEASE_ASSET}`, JSON.stringify(releasePayload));
 
 console.log(
   `Built ${OUT_DIR} v${version} with ${exports.join(", ")} (release dist/${RELEASE_ASSET})`,

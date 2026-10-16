@@ -73,6 +73,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release create "$TAG" dist/cidercade-apps-script.js \
+          gh release create "$TAG" dist/cidercade-apps-script.json \
             --title "$TAG" \
             --generate-notes

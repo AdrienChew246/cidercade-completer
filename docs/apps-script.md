@@ -22,7 +22,7 @@ Runs cidercade-completer from a Google Doc with a bound Apps Script. This is the
 
 The bound Apps Script will copied with the document.
 
-<img width="664" height="336" alt="{2413382E-03BE-4A75-88D2-298E92D5ADAC}" src="https://github.com/user-attachments/assets/f8f88641-ebf0-48d0-a2a2-a94ddb00fe64" />
+![{2413382E-03BE-4A75-88D2-298E92D5ADAC}](https://github.com/user-attachments/assets/f8f88641-ebf0-48d0-a2a2-a94ddb00fe64)
 
 ## Step 2: Create a Discord webhook
 
@@ -41,10 +41,13 @@ Skip this if you do not want Discord notifications.
 
 1. Open **your copy** of the document in [Google Docs](https://docs.google.com/document/)
 2. In the top navigation bar, click **Cidercade Completer** → **Set up**, Refresh the page if this it hasn't shown up
-3. Accept the warning "Google hasn't verified this app" by clicking <ins>Advanced</ins> and then <ins>Go to Cidercade Completer (unsafe)</ins>
-    <img width="500" height="356" alt="image" src="https://github.com/user-attachments/assets/1edd77fb-0ad9-43fd-93cb-d3fd805981e0" />
-4. Approve the Google permission prompts the first time (documents, forms, triggers, and external requests)
-    <img width="387" height="726" alt="image" src="https://github.com/user-attachments/assets/80180925-6273-4179-814a-e3e7ab7bc7b8" />
+3. Accept the warning "Google hasn't verified this app" by clicking Advanced and then Go to Cidercade Completer (unsafe)
+  ![image](https://github.com/user-attachments/assets/1edd77fb-0ad9-43fd-93cb-d3fd805981e0)
+4. Approve all of Google permission prompts the first time (documents, forms, triggers, external requests, and managing Apps Script projects for self-update)
+  ![image](https://github.com/user-attachments/assets/80180925-6273-4179-814a-e3e7ab7bc7b8)
+5. For self updating, turn on the Apps Script API for your Google account: open [Apps Script settings](https://script.google.com/home/usersettings) and enable **Google Apps Script API**
+
+
 
 ## Step 4: Save your phone number
 
@@ -54,56 +57,48 @@ In the setup dialog:
 2. Paste your Discord webhook URL if you created one
 3. Choose a **daily run time** (default 12:00 AM in the script timezone, usually America/Chicago)
 4. Click **Save and schedule**
-5. If you set a webhook, a second page asks for an optional **webhook name** and **icon URL** (with a live preview). Leave either blank to use the default Cidercade name and icon.
+5. If you set a webhook, a second page asks for an optional **webhook name** and **icon URL** with a live preview. Leave either blank to use the default Cidercade name and icon.
 
-Setup schedules daily runs around the hour you chose, and creates (or reuses) a verification Form with a form-submit trigger. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
+Setup schedules daily runs around the hour you chose, and creates a verification Form a submit trigger to refresh your Cidercade token. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
 
-<img width="510" height="449" alt="image" src="https://github.com/user-attachments/assets/7c48d937-0a02-4a82-8d2e-08a5c20385db" />
-
+![image](https://github.com/user-attachments/assets/7c48d937-0a02-4a82-8d2e-08a5c20385db)
 
 ## Step 5: Create the phone automation
 
 Open the instructions for your phone:
 
-<details>
-<summary>iOS 27 and later:</summary>
+iOS 27 and later:
 
 1. Open the **Shortcuts** app
 2. Tap **+** at the bottom of your screen
 3. Tap **Edit** at the top right of your screen
 4. Tap **Automation**, then **Message**. The trigger is added as a block at the top of the shortcut
 5. On that block, tap `Sender`, replace it with `Message`, and set it to contain:
-   ```plaintext
+  ```plaintext
    Your Cidercade verification code is:
-   ```
-   > Confirm that **Confirm Before Run** is off and **Automation** is on by tapping on the arrow on top of the block
+  ```
+  > Confirm that **Confirm Before Run** is off and **Automation** is on by tapping on the arrow on top of the block
 6. Add **URL Encode** and set its text to the **Message** variable from the automation block
 7. Add **Get Contents of URL**. For the URL, use the Shortcut URL from setup, then append the **URL Encode** result. The Shortcut URL already ends with `entry…=`, so the encoded SMS becomes the field value
 
 It should look something like this:
 
-<img width="398" height="567" alt="image" src="https://github.com/user-attachments/assets/7911b126-0afc-44d4-9e51-5f4e2118926a" />
+![image](https://github.com/user-attachments/assets/7911b126-0afc-44d4-9e51-5f4e2118926a)
 
-</details>
-
-<details>
-<summary>iOS 26 and earlier:</summary>
+iOS 26 and earlier:
 
 1. Open the **Shortcuts** app
 2. Tap the **Automation** tab, then **+** (or **New Automation**)
 3. Search for **Message** and select **When I receive a message**
 4. Set **Message Contains** to:
-   ```plaintext
+  ```plaintext
    Your Cidercade verification code is:
-   ```
+  ```
 5. Choose **Run Immediately**, and confirm
 6. Add **URL Encode** with **Shortcut Input** as the text
 7. Add **Get Contents of URL**. For the URL, use the Shortcut URL from setup, then append the **URL Encode** result
 
-</details>
-
-<details>
-<summary>Android:</summary>
+Android:
 
 1. Open **MacroDroid** and tap **Add Macro**
 2. Under **Triggers**, tap **+**, search for **SMS Received** and set:
@@ -111,18 +106,18 @@ It should look something like this:
 - **Incoming from:** Any number
 - **Message content:** Contains `Your Cidercade verification code is:`
 
-3. Under **Actions**, tap **+**, search for **HTTP Request** and fill in:
+1. Under **Actions**, tap **+**, search for **HTTP Request** and fill in:
+
 
 | Field  | Value                                                     |
 | ------ | --------------------------------------------------------- |
 | Method | `GET`                                                     |
 | URL    | `<Shortcut URL from setup>` + URL-encoded `[sms_message]` |
 
+
 `[sms_message]` is MacroDroid's placeholder for the text of the SMS. The Shortcut URL already ends with `entry…=`, so append only the encoded message. MacroDroid can URL-encode from the **...** menu next to the URL field.
 
-4. Name the macro (e.g. `Cidercade OTP`) and save it
-
-</details>
+1. Name the macro (e.g. `Cidercade OTP`) and save it
 
 > Prefer not to use a phone automation? When you get the verification text, open the **Cidercade Completer** form in your Google Drive, paste the SMS into **Verification SMS**, and submit. Verification codes expire, so do this soon after the text arrives.
 
@@ -134,7 +129,7 @@ It should look something like this:
 
 Since there is no token yet, this run posts **Token Missing** to Discord (if you set a webhook), texts you a verification code, and stops. That is expected.
 
-Your phone automation picks up the text and submits it to the verification form. The form trigger exchanges the code, saves the token, and runs today's tasks. Check Discord for the summary embed (if you set up a webhook).
+Your phone automation should pick up the text and submit it to the verification form. The form trigger exchanges the code, saves the token, and runs today's tasks. Check Discord for the summary embed (if you set up a webhook).
 
 ## That’s it
 
@@ -157,15 +152,15 @@ The admission piece property is named `ADMISSION_PIECES`. If you know your real 
 ## Troubleshooting
 
 
-| Problem                                                          | What to try                                                                                           |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Auth / 401 errors                                                | Check that your phone automation submitted the verification SMS to the form after the text arrived    |
-| No verification text after **Token Missing** / **Token Expired** | Check that the phone number in **Set up** matches the number on your Cidercade account                |
-| Form submission does nothing                                     | Re-run **Cidercade Completer** → **Set up** so the form-submit trigger is installed                   |
-| Deleted or missing verification form                             | Re-run **Set up**. It creates a new form and Shortcut URL; update your phone automation with that URL |
-| No Discord message                                               | Confirm the webhook URL in **Set up**, or check **Executions** under the Apps Script project          |
-| Menu missing                                                     | Refresh the document. The **Cidercade Completer** menu appears after `onOpen` runs                    |
-| Stuck on an old version                                          | Confirm a [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) exists with asset `cidercade-apps-script.js`, then run **Run daily tasks** and check Apps Script **Executions** for a “Loaded … from GitHub” log |
+| Problem                                                          | What to try                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth / 401 errors                                                | Check that your phone automation submitted the verification SMS to the form after the text arrived                                                                                                                                                                                          |
+| No verification text after **Token Missing** / **Token Expired** | Check that the phone number in **Set up** matches the number on your Cidercade account                                                                                                                                                                                                      |
+| Form submission does nothing                                     | Re-run **Cidercade Completer** → **Set up** so the form-submit trigger is installed                                                                                                                                                                                                         |
+| Deleted or missing verification form                             | Re-run **Set up**. It creates a new form and Shortcut URL; update your phone automation with that URL                                                                                                                                                                                       |
+| No Discord message                                               | Confirm the webhook URL in **Set up**, or check **Executions** under the Apps Script project                                                                                                                                                                                                |
+| Menu missing                                                     | Refresh the document. The **Cidercade Completer** menu appears after `onOpen` runs                                                                                                                                                                                                          |
+| Stuck on an old version                                          | Enable [Google Apps Script API](https://script.google.com/home/usersettings), re-authorize if prompted, then use **Cidercade Completer → Check for updates**. Confirm a [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) has asset `cidercade-apps-script.json` |
 
 
 ---
@@ -174,11 +169,12 @@ The admission piece property is named `ADMISSION_PIECES`. If you know your real 
 
 ## Updating
 
-Menu actions, daily runs, and form verification **auto-update** from the latest [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) when that release is newer than the copy embedded in your Doc. If GitHub is unreachable or there is no newer release, the embedded bundle runs instead.
+Cidercade completer can update from the latest [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) (asset `cidercade-apps-script.json`) using the Apps Script API when a newer version is available.
 
-`onOpen` (the menu) always uses the embedded bundle so the document stays fast to open.
+Requirements:
 
-You only need a fresh [template copy](https://docs.google.com/document/d/1uh-Hst3CkF594n6qLMcT97CNUQiYLpTkLrPIZWhKByc/copy) or a clasp push when the loader itself changes—or if you want a newer embedded fallback offline.
+1. Authorize the **Apps Script projects** permission when Google prompts for it
+2. Enable **Google Apps Script API** at [script.google.com/home/usersettings](https://script.google.com/home/usersettings)
 
 ---
 
@@ -195,10 +191,9 @@ Most people should [copy the template document](#step-1-copy-the-document). Use 
 bunx clasp login
 ```
 
-3. Create or attach the Doc-bound script (pick one):
+1. Create or attach the Doc-bound script (pick one):
 
-<details>
-<summary>Create a new Google Doc and bound script</summary>
+Create a new Google Doc and bound script
 
 ```bash
 bunx clasp create --type docs --title "Cidercade Completer" --rootDir dist/apps-script
@@ -206,10 +201,7 @@ bunx clasp create --type docs --title "Cidercade Completer" --rootDir dist/apps-
 
 Clasp creates a new Doc, binds a script to it, and writes `.clasp.json`. Open the Doc URL clasp prints when you are ready to continue setup.
 
-</details>
-
-<details>
-<summary>Attach a script to an existing Google Doc</summary>
+Attach a script to an existing Google Doc
 
 1. Open your Doc and copy its ID from the URL (`docs.google.com/document/d/<docId>/edit`)
 2. Create a script bound to that Doc (do **not** pass `--type docs` — that creates another document):
@@ -218,17 +210,15 @@ Clasp creates a new Doc, binds a script to it, and writes `.clasp.json`. Open th
 bunx clasp create --title "Cidercade Completer" --parentId <docId> --rootDir dist/apps-script
 ```
 
-</details>
-
-4. If clasp wrote `.clasp.json` with a different `rootDir`, set `"rootDir": "dist/apps-script"` (or `dist\\apps-script` on Windows). Keep the `scriptId` / `parentId` clasp printed.
-5. Push the bundle:
+1. If clasp wrote `.clasp.json` with a different `rootDir`, set `"rootDir": "dist/apps-script"` (or `dist\\apps-script` on Windows). Keep the `scriptId` / `parentId` clasp printed.
+2. Push the bundle:
 
 ```bash
 bun run gs:push
 ```
 
-6. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
+1. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
 
-Later, run `bun run gs:push` again to refresh the embedded fallback and loader. Day-to-day fixes still arrive from [GitHub releases](https://github.com/dylan-dang/cidercade-completer/releases) without a push. The first **Set up** run creates the verification Form automatically.
+Later, run `bun run gs:push` again if you are maintaining a template Doc yourself. Installed copies normally pick up [GitHub releases](https://github.com/dylan-dang/cidercade-completer/releases) via **Check for updates** / daily runs. The first **Set up** run creates the verification Form automatically.
 
-To publish an Apps Script update for everyone: bump `version` in `package.json` and merge to `master`. The **Release Apps Script** workflow tags `v<version>`, creates the GitHub release, and attaches `cidercade-apps-script.js`. You can also run that workflow manually from the Actions tab.
+To publish an Apps Script update for everyone: bump `version` in `package.json` and merge to `master`. The **Release Apps Script** workflow tags `v<version>`, creates the GitHub release, and attaches `cidercade-apps-script.json` (manifest + `updater` + `cidercade` sources for `projects.updateContent`). You can also run that workflow manually from the Actions tab.
