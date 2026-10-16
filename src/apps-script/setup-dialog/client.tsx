@@ -10,6 +10,7 @@ import {
   parseRunHour,
   ROOT_ID,
   runHourOptions,
+  type ProvisionResult,
   type SetupDialogInitial,
   type SetupErrors,
   type SetupForm,
@@ -23,11 +24,14 @@ const RUN_HOUR_OPTIONS = runHourOptions();
 
 type ScriptRunner = {
   withSuccessHandler(
-    handler: (result: SetupResult | WebhookAppearanceResult) => void,
+    handler: (
+      result: SetupResult | WebhookAppearanceResult | ProvisionResult,
+    ) => void,
   ): ScriptRunner;
   withFailureHandler(handler: (error: Error) => void): ScriptRunner;
   saveSetup(form: SetupForm): void;
   saveWebhookAppearance(form: WebhookAppearanceForm): void;
+  provisionSetup(): void;
 };
 
 declare const google: {
@@ -66,6 +70,15 @@ function saveWebhookAppearance(form: WebhookAppearanceForm) {
       )
       .withFailureHandler(reject)
       .saveWebhookAppearance(form);
+  });
+}
+
+function provisionSetup() {
+  return new Promise<ProvisionResult>((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler((result) => resolve(result as ProvisionResult))
+      .withFailureHandler(reject)
+      .provisionSetup();
   });
 }
 
@@ -167,11 +180,43 @@ function IconPreview({ url }: { url: string }) {
 
 type SavedSetup = Extract<SetupResult, { status: "saved" }>;
 
-function DonePanel({ saved }: { saved: SavedSetup }) {
+type ProvisionState =
+  | { status: "pending" }
+  | { status: "ready"; shortcutUrl: string; recreateNote: string }
+  | { status: "error"; message: string };
+
+function DonePanel({
+  saved,
+  provision,
+}: {
+  saved: SavedSetup;
+  provision: ProvisionState;
+}) {
+  const shortcutUrl =
+    provision.status === "ready"
+      ? provision.shortcutUrl
+      : saved.shortcutUrl;
+  const recreateNote =
+    provision.status === "ready" ? provision.recreateNote : "";
+
+  useEffect(() => {
+    fitDialogHeight();
+  }, [provision, shortcutUrl]);
+
   return (
     <div class="stack">
-      <p class="message">{saved.message}</p>
-      <CopyField label="Shortcut URL" value={saved.shortcutUrl} />
+      <p class="message">
+        {saved.message}
+        {recreateNote}
+      </p>
+      {provision.status === "pending" && !shortcutUrl ? (
+        <p class="field-hint">Preparing Shortcut URL…</p>
+      ) : shortcutUrl ? (
+        <CopyField label="Shortcut URL" value={shortcutUrl} />
+      ) : null}
+      {provision.status === "error" && (
+        <p class="failure">Could not finish setup: {provision.message}</p>
+      )}
       <ol class="steps">
         <li>URL Encode the Shortcut Input (the SMS).</li>
         <li>
@@ -186,9 +231,12 @@ function DonePanel({ saved }: { saved: SavedSetup }) {
       <button
         class="button"
         type="button"
+        disabled={provision.status === "pending" && !shortcutUrl}
         onClick={() => google.script.host.close()}
       >
-        Close
+        {provision.status === "pending" && !shortcutUrl
+          ? "Finishing…"
+          : "Close"}
       </button>
     </div>
   );
@@ -297,6 +345,9 @@ function SetupDialog({ initial }: { initial: SetupDialogInitial }) {
   const [failure, setFailure] = useState<string>();
   const [saved, setSaved] = useState<SavedSetup>();
   const [step, setStep] = useState<"setup" | "webhook" | "done">("setup");
+  const [provision, setProvision] = useState<ProvisionState>({
+    status: "pending",
+  });
 
   useEffect(() => {
     fitDialogHeight();
@@ -305,6 +356,36 @@ function SetupDialog({ initial }: { initial: SetupDialogInitial }) {
   function updateField(field: "phone" | "webhookUrl", value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function startProvision(cachedUrl: string) {
+    // Keep a cached Shortcut URL visible while triggers/form finish in background.
+    if (!cachedUrl) {
+      setProvision({ status: "pending" });
+    }
+    void provisionSetup()
+      .then((result) => {
+        if (result.status === "ready") {
+          setProvision({
+            status: "ready",
+            shortcutUrl: result.shortcutUrl,
+            recreateNote: result.recreateNote,
+          });
+          setSaved((current) =>
+            current
+              ? { ...current, shortcutUrl: result.shortcutUrl }
+              : current,
+          );
+        } else {
+          setProvision({ status: "error", message: result.message });
+        }
+      })
+      .catch((error: unknown) => {
+        setProvision({
+          status: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
   }
 
   async function submit() {
@@ -316,6 +397,16 @@ function SetupDialog({ initial }: { initial: SetupDialogInitial }) {
         setErrors(result.errors);
       } else {
         setSaved(result);
+        if (result.shortcutUrl) {
+          setProvision({
+            status: "ready",
+            shortcutUrl: result.shortcutUrl,
+            recreateNote: "",
+          });
+        }
+        if (result.needsProvision) {
+          startProvision(result.shortcutUrl);
+        }
         setStep(result.configureWebhook ? "webhook" : "done");
       }
     } catch (error) {
@@ -335,7 +426,7 @@ function SetupDialog({ initial }: { initial: SetupDialogInitial }) {
   }
 
   if (saved && step === "done") {
-    return <DonePanel saved={saved} />;
+    return <DonePanel saved={saved} provision={provision} />;
   }
 
   return (

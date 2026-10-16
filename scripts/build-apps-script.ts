@@ -9,17 +9,8 @@ const OUT_DIR = "dist/apps-script";
 const GLOBAL_NAME = "cidercade";
 const GITHUB_REPO = "dylan-dang/cidercade-completer";
 const RELEASE_ASSET = "cidercade-apps-script.js";
-/**
- * Skip GitHub release fetch for these entrypoints.
- * onOpen cannot UrlFetch; setup paths should stay snappy.
- */
-const NO_UPDATE = new Set([
-  "onOpen",
-  "setUp",
-  "saveSetup",
-  "saveWebhookAppearance",
-  "provisionSetup",
-]);
+/** Simple triggers cannot call UrlFetchApp. */
+const NO_UPDATE = new Set(["onOpen"]);
 
 const result = await Bun.build({
   entrypoints: [ENTRY],

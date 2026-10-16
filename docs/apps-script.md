@@ -146,7 +146,7 @@ Daily tasks now run automatically every day around the time you chose in Set up.
 
 ## Storage
 
-Your phone number, Discord webhook URL / name / icon URL, daily run hour (`DAILY_RUN_HOUR`, `0`–`23`), Cidercade token, admission piece count, and verification form ID are stored as script properties on the bound Apps Script project (**Extensions** → **Apps Script** → **Project Settings** → **Script properties**). Blank or missing `DISCORD_WEBHOOK_NAME` / `DISCORD_WEBHOOK_ICON_URL` use the built-in defaults. The run hour uses the script timezone from **Project Settings** (default America/Chicago).
+Your phone number, Discord webhook URL / name / icon URL, daily run hour (`DAILY_RUN_HOUR`, `0`–`23`), Cidercade token, admission piece count, verification form ID, and cached Shortcut URL (`VERIFICATION_SHORTCUT_URL`) are stored as script properties on the bound Apps Script project (**Extensions** → **Apps Script** → **Project Settings** → **Script properties**). Blank or missing `DISCORD_WEBHOOK_NAME` / `DISCORD_WEBHOOK_ICON_URL` use the built-in defaults. The run hour uses the script timezone from **Project Settings** (default America/Chicago).
 
 The admission piece property is named `ADMISSION_PIECES`. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
 

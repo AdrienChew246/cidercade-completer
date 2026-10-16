@@ -13,6 +13,7 @@ import {
   formatRunHour,
   INITIAL_FORM_ID,
   parseRunHour,
+  type ProvisionResult,
   type SetupDialogInitial,
   type SetupErrors,
   type SetupForm,
@@ -30,7 +31,9 @@ const ON_FORM_SUBMIT = "onFormSubmit";
 const TITLE = "Cidercade Completer";
 const VERIFICATION_QUESTION = "Verification SMS";
 const VERIFICATION_FORM_ID = "VERIFICATION_FORM_ID";
+const VERIFICATION_SHORTCUT_URL = "VERIFICATION_SHORTCUT_URL";
 const DAILY_RUN_HOUR_PROPERTY = "DAILY_RUN_HOUR";
+const PROVISION_PREVIOUS_HOUR = "PROVISION_PREVIOUS_HOUR";
 const SETUP_DIALOG_HTML = renderSetupDialog();
 const DISCORD_WEBHOOK_PATTERN =
   /^https:\/\/(?:\w+\.)?discord(?:app)?\.com\/api\/webhooks\//;
@@ -96,6 +99,13 @@ type PublishableForm = GoogleAppsScript.Forms.Form & {
   setPublished(enabled: boolean): GoogleAppsScript.Forms.Form;
 };
 
+function clearVerificationFormCache(
+  properties: GoogleAppsScript.Properties.Properties,
+) {
+  properties.deleteProperty(VERIFICATION_FORM_ID);
+  properties.deleteProperty(VERIFICATION_SHORTCUT_URL);
+}
+
 /** Form owned by this Doc-bound script; not the container itself. */
 function getOrCreateVerificationForm() {
   const properties = PropertiesService.getScriptProperties();
@@ -111,7 +121,7 @@ function getOrCreateVerificationForm() {
       console.error(
         `Could not open verification form ${existingId}: ${formatError(error)}`,
       );
-      properties.deleteProperty(VERIFICATION_FORM_ID);
+      clearVerificationFormCache(properties);
     }
   }
 
@@ -124,10 +134,7 @@ function getOrCreateVerificationForm() {
 function scheduleFormSubmit(form: GoogleAppsScript.Forms.Form) {
   const formId = form.getId();
   const existing = triggersFor(ON_FORM_SUBMIT);
-  if (
-    existing.length === 1 &&
-    existing[0]?.getTriggerSourceId() === formId
-  ) {
+  if (existing.length === 1 && existing[0]?.getTriggerSourceId() === formId) {
     return;
   }
 
@@ -138,20 +145,86 @@ function scheduleFormSubmit(form: GoogleAppsScript.Forms.Form) {
   ScriptApp.newTrigger(ON_FORM_SUBMIT).forForm(form).onFormSubmit().create();
 }
 
-/** Ensure the owned form can receive verification codes from a Shortcut. */
+function entryFieldFromShortcutUrl(shortcutUrl: string) {
+  return shortcutUrl.match(/[?&](entry\.\d+)=/)?.[1];
+}
+
+function findVerificationItem(form: GoogleAppsScript.Forms.Form) {
+  return (
+    form
+      .getItems(FormApp.ItemType.TEXT)
+      .find((entry) => entry.getTitle() === VERIFICATION_QUESTION) ??
+    form.getItems(FormApp.ItemType.TEXT)[0] ??
+    form.getItems(FormApp.ItemType.PARAGRAPH_TEXT)[0]
+  );
+}
+
+function buildShortcutUrl(
+  form: GoogleAppsScript.Forms.Form,
+  item: GoogleAppsScript.Forms.Item,
+) {
+  // item.getId() is NOT the entry.XXXX used in formResponse URLs. A prefilled
+  // URL is the reliable way to get the real field name Shortcuts need.
+  const itemResponse =
+    item.getType() === FormApp.ItemType.PARAGRAPH_TEXT
+      ? item.asParagraphTextItem().createResponse("x")
+      : item.asTextItem().createResponse("x");
+  const prefilledUrl = form
+    .createResponse()
+    .withItemResponse(itemResponse)
+    .toPrefilledUrl();
+  const entryField = prefilledUrl.match(/[?&](entry\.\d+)=/)?.[1];
+  if (!entryField) {
+    throw new Error("Could not find the form entry field for the Shortcut URL");
+  }
+  // Keep entry= last so Shortcuts can append the URL-encoded SMS.
+  const formResponseUrl = prefilledUrl
+    .replace(/\/viewform.*/i, "/formResponse")
+    .split("?")[0];
+  return `${formResponseUrl}?usp=pp_url&submit=Submit&${entryField}=`;
+}
+
+/**
+ * Reuse an existing form + cached Shortcut URL when the verification field's
+ * entry.XXXX still matches. Otherwise rebuild/configure as needed.
+ */
 function prepareVerificationForm() {
+  const properties = PropertiesService.getScriptProperties();
+  const existingId = properties.getProperty(VERIFICATION_FORM_ID);
+  const cachedUrl = properties.getProperty(VERIFICATION_SHORTCUT_URL);
+  const cachedEntry = cachedUrl
+    ? entryFieldFromShortcutUrl(cachedUrl)
+    : undefined;
+
+  if (existingId && cachedUrl && cachedEntry) {
+    try {
+      const form = FormApp.openById(existingId) as PublishableForm;
+      const item = findVerificationItem(form);
+      if (item) {
+        const shortcutUrl = buildShortcutUrl(form, item);
+        if (entryFieldFromShortcutUrl(shortcutUrl) === cachedEntry) {
+          return { form, created: false, shortcutUrl: cachedUrl };
+        }
+        // Question was recreated; keep the form but refresh the cached URL.
+        properties.setProperty(VERIFICATION_SHORTCUT_URL, shortcutUrl);
+        return { form, created: false, shortcutUrl };
+      }
+      // Field missing — fall through and reconfigure the form.
+    } catch (error) {
+      console.error(
+        `Could not open verification form ${existingId}: ${formatError(error)}`,
+      );
+      clearVerificationFormCache(properties);
+    }
+  }
+
   const { form, created } = getOrCreateVerificationForm();
   form.setTitle(TITLE);
   form.setDescription(
     "Paste a Cidercade verification SMS here, or point your phone automation at the Shortcut URL from Cidercade Completer → Set up.",
   );
 
-  const existing =
-    form
-      .getItems(FormApp.ItemType.TEXT)
-      .find((entry) => entry.getTitle() === VERIFICATION_QUESTION) ??
-    form.getItems(FormApp.ItemType.TEXT)[0] ??
-    form.getItems(FormApp.ItemType.PARAGRAPH_TEXT)[0];
+  const existing = findVerificationItem(form);
 
   const helpText =
     "This field acts as an endpoint for token refresh. Your mobile device should automatically send the SMS to this form, so you do not need to fill this out unless you are manually authenticating.";
@@ -181,29 +254,9 @@ function prepareVerificationForm() {
     // Older forms may not allow changing this after responses exist.
   }
 
-  // item.getId() is NOT the entry.XXXX used in formResponse URLs. A prefilled
-  // URL is the reliable way to get the real field name Shortcuts need.
-  const itemResponse =
-    item.getType() === FormApp.ItemType.PARAGRAPH_TEXT
-      ? item.asParagraphTextItem().createResponse("x")
-      : item.asTextItem().createResponse("x");
-  const prefilledUrl = form
-    .createResponse()
-    .withItemResponse(itemResponse)
-    .toPrefilledUrl();
-  const entryField = prefilledUrl.match(/[?&](entry\.\d+)=/)?.[1];
-  if (!entryField) {
-    throw new Error("Could not find the form entry field for the Shortcut URL");
-  }
-  // Keep entry= last so Shortcuts can append the URL-encoded SMS.
-  const formResponseUrl = prefilledUrl
-    .replace(/\/viewform.*/i, "/formResponse")
-    .split("?")[0];
-  return {
-    form,
-    created,
-    shortcutUrl: `${formResponseUrl}?usp=pp_url&submit=Submit&${entryField}=`,
-  };
+  const shortcutUrl = buildShortcutUrl(form, item);
+  properties.setProperty(VERIFICATION_SHORTCUT_URL, shortcutUrl);
+  return { form, created, shortcutUrl };
 }
 
 function runInBackground(task: Promise<unknown>, description: string) {
@@ -230,7 +283,7 @@ export function setUp() {
   DocumentApp.getUi().showModalDialog(html, `${TITLE} setup`);
 }
 
-/** Called by the setup dialog. */
+/** Fast path: validate and persist settings only. */
 export function saveSetup(form: SetupForm): SetupResult {
   const phone = formatPhoneNumber(form.phone);
   const webhookUrl = form.webhookUrl.trim();
@@ -256,6 +309,9 @@ export function saveSetup(form: SetupForm): SetupResult {
   const previousHour = readDailyRunHour();
   properties.setProperty("PHONE_NUMBER", phone);
   properties.setProperty(DAILY_RUN_HOUR_PROPERTY, String(runHour));
+  // Remember the old hour so background provision can decide whether to
+  // recreate the clock trigger after this property was overwritten.
+  properties.setProperty(PROVISION_PREVIOUS_HOUR, String(previousHour));
   if (webhookUrl) {
     properties.setProperty("DISCORD_WEBHOOK_URL", webhookUrl);
   } else {
@@ -267,29 +323,49 @@ export function saveSetup(form: SetupForm): SetupResult {
     properties.deleteProperty("TOKEN");
   }
 
-  const {
-    form: verificationForm,
-    created,
-    shortcutUrl,
-  } = prepareVerificationForm();
-  scheduleDailyRun(runHour, previousHour);
-  scheduleFormSubmit(verificationForm);
-
   const schedule = `Daily tasks will run every day around ${formatRunHour(runHour)} (${Session.getScriptTimeZone()}).`;
-  const recreateNote = created
-    ? " A new verification form was created, so update your phone automation with the Shortcut URL below."
-    : "";
   const message = properties.getProperty("TOKEN")
-    ? `Saved. ${schedule}${recreateNote}`
-    : `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}${recreateNote}`;
+    ? `Saved. ${schedule}`
+    : `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}`;
 
   return {
     status: "saved",
     message,
-    shortcutUrl,
+    shortcutUrl: properties.getProperty(VERIFICATION_SHORTCUT_URL) ?? "",
     configureWebhook: Boolean(webhookUrl),
     webhookAppearance: readWebhookAppearance(),
+    needsProvision: true,
   };
+}
+
+/**
+ * Creates/reuses the verification form and installs triggers.
+ * Called from the dialog after save so the first page can return quickly.
+ */
+export function provisionSetup(): ProvisionResult {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const runHour = readDailyRunHour();
+    const previousHour = parseRunHour(
+      properties.getProperty(PROVISION_PREVIOUS_HOUR),
+      runHour,
+    );
+
+    const { form, created, shortcutUrl } = prepareVerificationForm();
+    scheduleDailyRun(runHour, previousHour);
+    scheduleFormSubmit(form);
+    properties.deleteProperty(PROVISION_PREVIOUS_HOUR);
+
+    return {
+      status: "ready",
+      shortcutUrl,
+      recreateNote: created
+        ? " A new verification form was created, so update your phone automation with the Shortcut URL below."
+        : "",
+    };
+  } catch (error) {
+    return { status: "error", message: formatError(error) };
+  }
 }
 
 /** Called by the setup dialog after a webhook URL is saved. */
