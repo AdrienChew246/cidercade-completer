@@ -17,10 +17,12 @@ Runs cidercade-completer from a Google Doc with a bound Apps Script. This is the
 
 ## Step 1: Copy the document
 
-1. Open the [Cidercade Completer document](https://docs.google.com/document/d/YOUR_DOCUMENT_ID/copy)
+1. Open the [Cidercade Completer document copy page](https://docs.google.com/document/d/1uh-Hst3CkF594n6qLMcT97CNUQiYLpTkLrPIZWhKByc/copy)
 2. Click **Make a copy** and keep the copy in your Google Drive
 
 The bound Apps Script will copied with the document.
+
+<img width="664" height="336" alt="{2413382E-03BE-4A75-88D2-298E92D5ADAC}" src="https://github.com/user-attachments/assets/f8f88641-ebf0-48d0-a2a2-a94ddb00fe64" />
 
 ## Step 2: Create a Discord webhook
 
@@ -39,7 +41,10 @@ Skip this if you do not want Discord notifications.
 
 1. Open **your copy** of the document in [Google Docs](https://docs.google.com/document/)
 2. In the top navigation bar, click **Cidercade Completer** → **Set up**
-3. Approve the Google permission prompts the first time (documents, forms, triggers, and external requests)
+3. Accept the warning "Google hasn't verified this app" by clicking <ins>Advanced</ins> and then <ins>Go to Cidercade Completer (unsafe)</ins>
+    <img width="500" height="356" alt="image" src="https://github.com/user-attachments/assets/1edd77fb-0ad9-43fd-93cb-d3fd805981e0" />
+4. Approve the Google permission prompts the first time (documents, forms, triggers, and external requests)
+    <img width="387" height="726" alt="image" src="https://github.com/user-attachments/assets/80180925-6273-4179-814a-e3e7ab7bc7b8" />
 
 ## Step 4: Save your phone number
 
@@ -50,6 +55,9 @@ In the setup dialog:
 3. Click **Save and schedule**
 
 Setup schedules daily runs around midnight, and creates (or reuses) a verification Form with a form-submit trigger. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
+
+<img width="510" height="449" alt="image" src="https://github.com/user-attachments/assets/7c48d937-0a02-4a82-8d2e-08a5c20385db" />
+
 
 ## Step 5: Create the phone automation
 
