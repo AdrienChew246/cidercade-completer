@@ -1,6 +1,6 @@
 # Google Apps Script setup
 
-Runs cidercade-completer on a Google Form with a bound Apps Script. No GitHub fork, personal access token, or Actions minutes. Setup happens in a dialog on the form, and your phone posts verification texts to a form URL.
+Runs cidercade-completer from a Google Doc with a bound Apps Script. This is the easiest method to setting up Cidercade Completer.
 
 [Back to README](../README.md)
 
@@ -15,12 +15,12 @@ Runs cidercade-completer on a Google Form with a bound Apps Script. No GitHub fo
 
 
 
-## Step 1: Copy the form
+## Step 1: Copy the document
 
-1. Open the [Cidercade Completer form](https://docs.google.com/forms/d/1256fPxpAwvN5h3d951TjTCA1vnohQqgr9CnleQkpvnc/copy)
+1. Open the [Cidercade Completer document](https://docs.google.com/document/d/YOUR_DOCUMENT_ID/copy)
 2. Click **Make a copy** and keep the copy in your Google Drive
 
-The bound Apps Script is copied with the form.
+The bound Apps Script will copied with the document.
 
 ## Step 2: Create a Discord webhook
 
@@ -37,22 +37,19 @@ Skip this if you do not want Discord notifications.
 
 ## Step 3: Open Set up
 
-1. Open **your copy** of the form in the [Google Forms editor](https://docs.google.com/forms/)
-2. Refresh the page if you do not see a **Cidercade Completer** menu yet
-3. Click **Cidercade Completer** → **Set up**
-4. Approve the Google permission prompts the first time (forms, triggers, and external requests)
-
-
+1. Open **your copy** of the document in [Google Docs](https://docs.google.com/document/)
+2. In the top navigation bar, click **Cidercade Completer** → **Set up**
+3. Approve the Google permission prompts the first time (documents, forms, triggers, and external requests)
 
 ## Step 4: Save your phone number
 
 In the setup dialog:
 
-1. Enter the phone number on your Cidercade account, e.g. `(512) 555-0123` (use `+` and the country code outside the US)
+1. Enter the phone number on your Cidercade account, e.g. `(512) 555-0123` (use `+` for a country code outside the US)
 2. Paste your Discord webhook URL if you created one
 3. Click **Save and schedule**
 
-Setup schedules daily runs around midnight, wires the form to accept verification texts, and shows a **Shortcut URL**. Copy that URL. Your phone automation will append the verification SMS to it.
+Setup schedules daily runs around midnight, and creates (or reuses) a verification Form with a form-submit trigger. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
 
 ## Step 5: Create the phone automation
 
@@ -110,17 +107,17 @@ Android:
 
 
 
-> Prefer not to use a phone automation? When you get the verification text, open the live form, paste the SMS into **Verification SMS**, and submit. Verification codes expire, so do this soon after the text arrives.
+> Prefer not to use a phone automation? When you get the verification text, open the **Cidercade Completer** form in your Google Drive, paste the SMS into **Verification SMS**, and submit. Verification codes expire, so do this soon after the text arrives.
 
 
 
 ## Step 6: Run it for the first time
 
-1. In the form editor, click **Cidercade Completer** → **Run daily tasks**
+1. In the document, click **Cidercade Completer** → **Run daily tasks**
 
 Since there is no token yet, this run posts **Token Missing** to Discord (if you set a webhook), texts you a verification code, and stops. That is expected.
 
-Your phone automation picks up the text and submits it to the form. The form trigger exchanges the code, saves the token, and runs today's tasks. Check Discord for the summary embed (if you set up a webhook).
+Your phone automation picks up the text and submits it to the verification form. The form trigger exchanges the code, saves the token, and runs today's tasks. Check Discord for the summary embed (if you set up a webhook).
 
 ## That’s it
 
@@ -130,16 +127,27 @@ Daily tasks now run automatically every day around midnight. When your Cidercade
 
 
 
+## Storage
+
+Your phone number, Discord webhook URL, Cidercade token, admission piece count, and verification form ID are stored as script properties on the bound Apps Script project (**Extensions** → **Apps Script** → **Project Settings** → **Script properties**).
+
+The admission piece property is named `ADMISSION_PIECES`. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
+
+---
+
+
+
 ## Troubleshooting
 
 
-| Problem                                                          | What to try                                                                                        |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Auth / 401 errors                                                | Check that your phone automation submitted the verification SMS to the form after the text arrived |
-| No verification text after **Token Missing** / **Token Expired** | Check that the phone number in **Set up** matches the number on your Cidercade account             |
-| Form submission does nothing                                     | Re-run **Cidercade Completer** → **Set up** so the form-submit trigger is installed                |
-| No Discord message                                               | Confirm the webhook URL in **Set up**, or check **Executions** under the Apps Script project       |
-| Menu missing                                                     | Refresh the form editor. The **Cidercade Completer** menu appears after `onOpen` runs              |
+| Problem                                                          | What to try                                                                                           |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Auth / 401 errors                                                | Check that your phone automation submitted the verification SMS to the form after the text arrived    |
+| No verification text after **Token Missing** / **Token Expired** | Check that the phone number in **Set up** matches the number on your Cidercade account                |
+| Form submission does nothing                                     | Re-run **Cidercade Completer** → **Set up** so the form-submit trigger is installed                   |
+| Deleted or missing verification form                             | Re-run **Set up**. It creates a new form and Shortcut URL; update your phone automation with that URL |
+| No Discord message                                               | Confirm the webhook URL in **Set up**, or check **Executions** under the Apps Script project          |
+| Menu missing                                                     | Refresh the document. The **Cidercade Completer** menu appears after `onOpen` runs                    |
 
 
 ---
@@ -148,4 +156,32 @@ Daily tasks now run automatically every day around midnight. When your Cidercade
 
 ## Updating
 
-This path does not auto-sync from GitHub. When the project ships fixes, make a fresh copy of the [template form](https://docs.google.com/forms/d/1256fPxpAwvN5h3d951TjTCA1vnohQqgr9CnleQkpvnc/copy) or ask the maintainer how to push an update into your existing script.
+This setup does not auto-sync from GitHub. When the project gets an update, make a fresh copy of the [template document](https://docs.google.com/document/d/YOUR_DOCUMENT_ID/copy), or push an update into your own script with clasp (below).
+
+---
+
+
+
+## Build your own with clasp
+
+Most people should [copy the template document](#step-1-copy-the-document). Use this if you want to deploy from this repo yourself.
+
+1. Install [Bun](https://bun.sh), clone this repo, and run `bun install`
+2. Create a blank [Google Doc](https://docs.google.com/document/) and copy its ID from the URL (`docs.google.com/document/d/<docId>/edit`)
+3. Log in and create a script bound to that document:
+
+```bash
+bunx clasp login
+bunx clasp create --type docs --title "Cidercade Completer" --parentId <docId>
+```
+
+1. Point `.clasp.json` at the new script. Keep `"rootDir": "dist/apps-script"` (or `dist\\apps-script` on Windows) and set `scriptId` / `parentId` to the values clasp printed
+2. Push the bundle:
+
+```bash
+bun run gs:push
+```
+
+1. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
+
+Later, run `bun run gs:push` again to deploy updates from this repo into your document. The first **Set up** run creates the verification Form automatically.

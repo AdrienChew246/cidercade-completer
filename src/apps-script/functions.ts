@@ -22,6 +22,7 @@ const ON_FORM_SUBMIT = "onFormSubmit";
 
 const TITLE = "Cidercade Completer";
 const VERIFICATION_QUESTION = "Verification SMS";
+const VERIFICATION_FORM_ID = "VERIFICATION_FORM_ID";
 const DAILY_RUN_HOUR = 0;
 const SETUP_DIALOG_HTML = renderSetupDialog();
 const DISCORD_WEBHOOK_PATTERN =
@@ -48,8 +49,36 @@ function scheduleDailyRun() {
     .create();
 }
 
-function scheduleFormSubmit() {
-  const form = FormApp.getActiveForm();
+type PublishableForm = GoogleAppsScript.Forms.Form & {
+  supportsAdvancedResponderPermissions(): boolean;
+  setPublished(enabled: boolean): GoogleAppsScript.Forms.Form;
+};
+
+/** Form owned by this Doc-bound script; not the container itself. */
+function getOrCreateVerificationForm() {
+  const properties = PropertiesService.getScriptProperties();
+  const existingId = properties.getProperty(VERIFICATION_FORM_ID);
+  if (existingId) {
+    try {
+      return {
+        form: FormApp.openById(existingId) as PublishableForm,
+        created: false,
+      };
+    } catch (error) {
+      // Trash/delete leaves a stale ID; clear it and make a new form below.
+      console.error(
+        `Could not open verification form ${existingId}: ${formatError(error)}`,
+      );
+      properties.deleteProperty(VERIFICATION_FORM_ID);
+    }
+  }
+
+  const form = FormApp.create(TITLE) as PublishableForm;
+  properties.setProperty(VERIFICATION_FORM_ID, form.getId());
+  return { form, created: true };
+}
+
+function scheduleFormSubmit(form: GoogleAppsScript.Forms.Form) {
   for (const trigger of ScriptApp.getProjectTriggers()) {
     if (trigger.getHandlerFunction() === ON_FORM_SUBMIT) {
       ScriptApp.deleteTrigger(trigger);
@@ -59,17 +88,12 @@ function scheduleFormSubmit() {
   ScriptApp.newTrigger(ON_FORM_SUBMIT).forForm(form).onFormSubmit().create();
 }
 
-type PublishableForm = GoogleAppsScript.Forms.Form & {
-  supportsAdvancedResponderPermissions(): boolean;
-  setPublished(enabled: boolean): GoogleAppsScript.Forms.Form;
-};
-
-/** Ensure the bound form can receive verification codes from a Shortcut. */
+/** Ensure the owned form can receive verification codes from a Shortcut. */
 function prepareVerificationForm() {
-  const form = FormApp.getActiveForm() as PublishableForm;
+  const { form, created } = getOrCreateVerificationForm();
   form.setTitle(TITLE);
   form.setDescription(
-    "Paste a Cidercade verification SMS here, or point your phone automation at the Shortcut URL from Cidercade → Set up.",
+    "Paste a Cidercade verification SMS here, or point your phone automation at the Shortcut URL from Cidercade Completer → Set up.",
   );
 
   const existing =
@@ -80,7 +104,7 @@ function prepareVerificationForm() {
     form.getItems(FormApp.ItemType.PARAGRAPH_TEXT)[0];
 
   const helpText =
-    "This field acts as a endpoint for token refresh. Your mobile device should automatically send the SMS to this form, so you do not need to fill this out unless you are manually authenticating.";
+    "This field acts as an endpoint for token refresh. Your mobile device should automatically send the SMS to this form, so you do not need to fill this out unless you are manually authenticating.";
 
   const item = (
     existing
@@ -126,6 +150,8 @@ function prepareVerificationForm() {
     .replace(/\/viewform.*/i, "/formResponse")
     .split("?")[0];
   return {
+    form,
+    created,
     shortcutUrl: `${formResponseUrl}?usp=pp_url&submit=Submit&${entryField}=`,
   };
 }
@@ -149,7 +175,7 @@ export function setUp() {
   )
     .setWidth(460)
     .setHeight(360);
-  FormApp.getUi().showModalDialog(html, `${TITLE} setup`);
+  DocumentApp.getUi().showModalDialog(html, `${TITLE} setup`);
 }
 
 /** Called by the setup dialog. */
@@ -182,23 +208,27 @@ export function saveSetup(form: SetupForm): SetupResult {
     properties.deleteProperty("TOKEN");
   }
 
-  const relay = prepareVerificationForm();
+  const { form: verificationForm, created, shortcutUrl } =
+    prepareVerificationForm();
   scheduleDailyRun();
-  scheduleFormSubmit();
+  scheduleFormSubmit(verificationForm);
 
   const schedule = `Daily tasks will run every day around ${DAILY_RUN_HOUR}:00.`;
+  const recreateNote = created
+    ? " A new verification form was created, so update your phone automation with the Shortcut URL below."
+    : "";
   if (properties.getProperty("TOKEN")) {
     return {
       status: "saved",
-      message: `Saved. ${schedule}`,
-      ...relay,
+      message: `Saved. ${schedule}${recreateNote}`,
+      shortcutUrl,
     };
   }
 
   return {
     status: "saved",
-    message: `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}`,
-    ...relay,
+    message: `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}${recreateNote}`,
+    shortcutUrl,
   };
 }
 
@@ -206,14 +236,16 @@ async function authenticate(code: string) {
   const properties = PropertiesService.getScriptProperties();
   const phone = properties.getProperty("PHONE_NUMBER");
   if (!phone) {
-    throw new Error("PHONE_NUMBER is not set. Run Cidercade → Set up first.");
+    throw new Error(
+      `PHONE_NUMBER is not set. Run ${TITLE} → Set up first.`,
+    );
   }
 
   properties.setProperty("TOKEN", await exchangeVerificationCode(phone, code));
   await runDailyTasks();
 }
 
-/** Installable trigger: verification SMS posted to this form. */
+/** Installable trigger: verification SMS posted to the owned form. */
 export function onFormSubmit(
   event?: GoogleAppsScript.Events.FormsOnFormSubmit,
 ) {
@@ -230,7 +262,11 @@ export function onFormSubmit(
     .join(" ");
 
   try {
-    FormApp.getActiveForm().deleteResponse(response.getId());
+    const formId =
+      PropertiesService.getScriptProperties().getProperty(VERIFICATION_FORM_ID);
+    if (formId) {
+      FormApp.openById(formId).deleteResponse(response.getId());
+    }
   } catch (error) {
     console.error(`Could not delete form response: ${formatError(error)}`);
   }
@@ -242,7 +278,7 @@ export function onFormSubmit(
 }
 
 export function onOpen() {
-  FormApp.getUi()
+  DocumentApp.getUi()
     .createMenu(TITLE)
     .addItem("Set up", SET_UP)
     .addItem("Run daily tasks", RUN_DAILY_TASKS)

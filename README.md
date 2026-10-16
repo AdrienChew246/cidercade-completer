@@ -17,8 +17,8 @@ Each day it:
 
 | Method                 | Best when                                                           | Guide                                            |
 | ---------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| **Google Apps Script** | You want a Google Doc with a setup dialog and minimal steps         | [docs/apps-script.md](docs/apps-script.md)       |
 | **GitHub Actions**     | You want a fork that runs itself and can auto-update from this repo | [docs/github-actions.md](docs/github-actions.md) |
-| **Google Apps Script** | You want a Google Form with a setup dialog and no GitHub token      | [docs/apps-script.md](docs/apps-script.md)       |
 | **Local**              | You want to run it on your own computer or service                  | [docs/local.md](docs/local.md)                   |
 
 ---
@@ -34,15 +34,7 @@ Each run will add to a running total of admission pieces earned and subtracts an
 
 On your first run, cidercade-completer will seed your starting amount of incomplete pieces. However, it won't be able to see any overflowed pieces earned before tracking started, so you may need to update the count if you already had overflowed pieces (e.g. by running an older version of cidercade-completer before piece counting was implemented). Additionally, cidercade-completer will not be able see any pieces not earned by cidercade-completer, so please update your count if that occurs.
 
-Where the count is stored depends on how you run it:
-
-| Setup              | Storage                                                                                                                                                                                                     |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub Actions     | Repository variable `ADMISSION_PIECES` under [**Settings** → **Secrets and variables** → **Actions** → **Variables**](../../settings/variables/actions). Needs `GH_PAT` with **Variables: Read and write**. |
-| Google Apps Script | Script property `ADMISSION_PIECES` on the bound Apps Script project                                                                                                                                         |
-| Local              | `.admission-pieces.json` in the project root                                                                                                                                                                |
-
-If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
+Where the count is stored depends on how you run it; see the setup guide you followed.
 
 ---
 

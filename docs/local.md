@@ -67,6 +67,8 @@ For example, with a cron job:
 
 On Windows, create a scheduled task to run `bun start` daily at a specific time.
 
-## Admission pieces
+## Storage
 
-When running locally, the overflowed admission piece count is stored in `.admission-pieces.json` in the project root.
+Your phone number, Discord webhook URL, and Cidercade token live in the `.env` file (or your shell environment).
+
+The overflowed admission piece count is stored in `.admission-pieces.json` in the project root. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.

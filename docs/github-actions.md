@@ -2,6 +2,8 @@
 
 GitHub runs cidercade-completer for you every day. You do not need to install anything on your computer.
 
+> As of 2026, free-tier scheduled GitHub Actions often start hours late, and there is a small chance a day’s run is skipped entirely. If you need the daily tasks to run close to on time, prefer [Google Apps Script](apps-script.md) or [local](local.md). To stay on Actions with more reliable timing, add a [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners) or use a third-party runner provider.
+
 [Back to README](../README.md)
 
 ## What you need
@@ -235,13 +237,22 @@ If there is a green check, the script succeeded and will now run every day. When
 
 ---
 
+## Storage
+
+Your phone number, Discord webhook URL, and Cidercade token live as repository secrets under [**Settings** → **Secrets and variables** → **Actions**](../../../settings/secrets/actions).
+
+The overflowed admission piece count is a repository variable called `ADMISSION_PIECES`, under [**Variables**](../../../settings/variables/actions). That needs `GH_PAT` with **Variables: Read and write**. Without it, the count line is left out of the Discord summary. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
+
+---
+
 ## Troubleshooting
 
-| Problem                                                          | What to try                                                                                                                                                                      |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth / 401 errors                                                | Check that your phone automation ran **Authenticate Cidercade** after the verification text. If you enter your token manually, replace `TOKEN` with a fresh one from the browser |
-| No verification text after **Token Missing** / **Token Expired** | Check that `PHONE_NUMBER` matches the number on your Cidercade account                                                                                                           |
-| Authenticate fails saving the secret                             | Check that `GH_PAT` is set, has **Secrets: Read and write**, and has not expired                                                                                                 |
-| "Could not update admission piece count"                         | Check that `GH_PAT` is set and has **Variables: Read and write**                                                                                                                 |
-| No Discord message                                               | Confirm `DISCORD_WEBHOOK_URL` is set, or check the [Actions log](../../../actions)                                                                                               |
-| Scheduled runs stopped after ~2 months                           | Confirm [**Read and write permissions**](../../../settings/actions) (Step 5) so the daily workflow's keep-alive step can commit                                                  |
+| Problem                                                          | What to try                                                                                                                                                                          |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auth / 401 errors                                                | Check that your phone automation ran **Authenticate Cidercade** after the verification text. If you enter your token manually, replace `TOKEN` with a fresh one from the browser     |
+| No verification text after **Token Missing** / **Token Expired** | Check that `PHONE_NUMBER` matches the number on your Cidercade account                                                                                                               |
+| Authenticate fails saving the secret                             | Check that `GH_PAT` is set, has **Secrets: Read and write**, and has not expired                                                                                                     |
+| "Could not update admission piece count"                         | Check that `GH_PAT` is set and has **Variables: Read and write**                                                                                                                     |
+| No Discord message                                               | Confirm `DISCORD_WEBHOOK_URL` is set, or check the [Actions log](../../../actions)                                                                                                   |
+| Scheduled runs stopped after ~2 months                           | Confirm [**Read and write permissions**](../../../settings/actions) (Step 5) so the daily workflow's keep-alive step can commit                                                      |
+| Scheduled run hours late or missing                              | Common on free-tier Actions as of 2026. Re-run **Daily Cidercade** manually, add a self-hosted or third-party runner, or switch to [Apps Script](apps-script.md) / [local](local.md) |
