@@ -17,7 +17,7 @@ Each day it:
 
 | Method                 | Best when                                                           | Guide                                            |
 | ---------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
-| **Google Apps Script** | You want a Google Doc with a setup dialog and minimal steps         | [docs/apps-script.md](docs/apps-script.md)       |
+| **Google Apps Script** | You want a Google Doc with a setup dialog; auto-updates from GitHub releases | [docs/apps-script.md](docs/apps-script.md)       |
 | **GitHub Actions**     | You want a fork that runs itself and can auto-update from this repo | [docs/github-actions.md](docs/github-actions.md) |
 | **Local**              | You want to run it on your own computer or service                  | [docs/local.md](docs/local.md)                   |
 

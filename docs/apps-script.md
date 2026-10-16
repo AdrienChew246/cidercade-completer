@@ -163,6 +163,7 @@ The admission piece property is named `ADMISSION_PIECES`. If you know your real 
 | Deleted or missing verification form                             | Re-run **Set up**. It creates a new form and Shortcut URL; update your phone automation with that URL |
 | No Discord message                                               | Confirm the webhook URL in **Set up**, or check **Executions** under the Apps Script project          |
 | Menu missing                                                     | Refresh the document. The **Cidercade Completer** menu appears after `onOpen` runs                    |
+| Stuck on an old version                                          | Confirm a [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) exists with asset `cidercade-apps-script.js`, then run **Run daily tasks** and check Apps Script **Executions** for a “Loaded … from GitHub” log |
 
 
 ---
@@ -171,7 +172,11 @@ The admission piece property is named `ADMISSION_PIECES`. If you know your real 
 
 ## Updating
 
-This setup does not auto-sync from GitHub. When the project gets an update, make a fresh copy of the [template document](https://docs.google.com/document/d/YOUR_DOCUMENT_ID/copy), or push an update into your own script with clasp (below).
+Menu actions, daily runs, and form verification **auto-update** from the latest [GitHub release](https://github.com/dylan-dang/cidercade-completer/releases) when that release is newer than the copy embedded in your Doc. If GitHub is unreachable or there is no newer release, the embedded bundle runs instead.
+
+`onOpen` (the menu) always uses the embedded bundle so the document stays fast to open.
+
+You only need a fresh [template copy](https://docs.google.com/document/d/1uh-Hst3CkF594n6qLMcT97CNUQiYLpTkLrPIZWhKByc/copy) or a clasp push when the loader itself changes—or if you want a newer embedded fallback offline.
 
 ---
 
@@ -199,4 +204,6 @@ bun run gs:push
 
 1. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
 
-Later, run `bun run gs:push` again to deploy updates from this repo into your document. The first **Set up** run creates the verification Form automatically.
+Later, run `bun run gs:push` again to refresh the embedded fallback and loader. Day-to-day fixes still arrive from [GitHub releases](https://github.com/dylan-dang/cidercade-completer/releases) without a push. The first **Set up** run creates the verification Form automatically.
+
+To publish an Apps Script update for everyone: bump `version` in `package.json` and merge to `master`. The **Release Apps Script** workflow tags `v<version>`, creates the GitHub release, and attaches `cidercade-apps-script.js`. You can also run that workflow manually from the Actions tab.

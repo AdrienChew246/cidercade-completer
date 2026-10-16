@@ -208,8 +208,11 @@ export function saveSetup(form: SetupForm): SetupResult {
     properties.deleteProperty("TOKEN");
   }
 
-  const { form: verificationForm, created, shortcutUrl } =
-    prepareVerificationForm();
+  const {
+    form: verificationForm,
+    created,
+    shortcutUrl,
+  } = prepareVerificationForm();
   scheduleDailyRun();
   scheduleFormSubmit(verificationForm);
 
@@ -236,9 +239,7 @@ async function authenticate(code: string) {
   const properties = PropertiesService.getScriptProperties();
   const phone = properties.getProperty("PHONE_NUMBER");
   if (!phone) {
-    throw new Error(
-      `PHONE_NUMBER is not set. Run ${TITLE} → Set up first.`,
-    );
+    throw new Error(`PHONE_NUMBER is not set. Run ${TITLE} → Set up first.`);
   }
 
   properties.setProperty("TOKEN", await exchangeVerificationCode(phone, code));
