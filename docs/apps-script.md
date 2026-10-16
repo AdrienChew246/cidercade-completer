@@ -187,22 +187,45 @@ You only need a fresh [template copy](https://docs.google.com/document/d/1uh-Hst
 Most people should [copy the template document](#step-1-copy-the-document). Use this if you want to deploy from this repo yourself.
 
 1. Install [Bun](https://bun.sh), clone this repo, and run `bun install`
-2. Create a blank [Google Doc](https://docs.google.com/document/) and copy its ID from the URL (`docs.google.com/document/d/<docId>/edit`)
-3. Log in and create a script bound to that document:
+2. Log in to clasp:
 
 ```bash
 bunx clasp login
-bunx clasp create --type docs --title "Cidercade Completer" --parentId <docId>
 ```
 
-1. Point `.clasp.json` at the new script. Keep `"rootDir": "dist/apps-script"` (or `dist\\apps-script` on Windows) and set `scriptId` / `parentId` to the values clasp printed
-2. Push the bundle:
+3. Create or attach the Doc-bound script (pick one):
+
+<details>
+<summary>Create a new Google Doc and bound script</summary>
+
+```bash
+bunx clasp create --type docs --title "Cidercade Completer" --rootDir dist/apps-script
+```
+
+Clasp creates a new Doc, binds a script to it, and writes `.clasp.json`. Open the Doc URL clasp prints when you are ready to continue setup.
+
+</details>
+
+<details>
+<summary>Attach a script to an existing Google Doc</summary>
+
+1. Open your Doc and copy its ID from the URL (`docs.google.com/document/d/<docId>/edit`)
+2. Create a script bound to that Doc (do **not** pass `--type docs` — that creates another document):
+
+```bash
+bunx clasp create --title "Cidercade Completer" --parentId <docId> --rootDir dist/apps-script
+```
+
+</details>
+
+4. If clasp wrote `.clasp.json` with a different `rootDir`, set `"rootDir": "dist/apps-script"` (or `dist\\apps-script` on Windows). Keep the `scriptId` / `parentId` clasp printed.
+5. Push the bundle:
 
 ```bash
 bun run gs:push
 ```
 
-1. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
+6. Open the document, then continue from [Step 3: Open Set up](#step-3-open-set-up)
 
 Later, run `bun run gs:push` again to refresh the embedded fallback and loader. Day-to-day fixes still arrive from [GitHub releases](https://github.com/dylan-dang/cidercade-completer/releases) without a push. The first **Set up** run creates the verification Form automatically.
 

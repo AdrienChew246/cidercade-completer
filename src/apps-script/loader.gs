@@ -40,18 +40,25 @@ function cidercadeIsNewer_(remote, embedded) {
   return false;
 }
 
+/** Returns null when GitHub is unreachable or has no usable latest tag. */
 function cidercadeLatestTag_() {
-  var response = UrlFetchApp.fetch(
-    "https://github.com/" + CIDERCADE_GITHUB_REPO + "/releases/latest",
-    { followRedirects: false, muteHttpExceptions: true },
-  );
-  var code = response.getResponseCode();
-  if (code !== 302 && code !== 301) return null;
-  var headers = response.getHeaders();
-  var location = headers.Location || headers.location;
-  if (!location) return null;
-  var match = /\/releases\/tag\/([^/?#]+)/.exec(location);
-  return match ? decodeURIComponent(match[1]) : null;
+  try {
+    var response = UrlFetchApp.fetch(
+      "https://github.com/" + CIDERCADE_GITHUB_REPO + "/releases/latest",
+      { followRedirects: false, muteHttpExceptions: true },
+    );
+    var code = response.getResponseCode();
+    if (code !== 302 && code !== 301) return null;
+    var headers = response.getHeaders();
+    var location = headers.Location || headers.location;
+    if (!location) return null;
+    var match = /\/releases\/tag\/([^/?#]+)/.exec(location);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch (error) {
+    // DNS / timeout / UrlFetch quota — treat as "no update".
+    console.error("Could not reach GitHub for latest release: " + error);
+    return null;
+  }
 }
 
 function cidercadeFetchRelease_(tag) {
@@ -72,14 +79,18 @@ function cidercadeFetchRelease_(tag) {
 
 function cidercadeApplyRelease_(source) {
   var previous = cidercade;
-  eval(source);
-  if (
-    typeof cidercade !== "object" ||
-    cidercade === null ||
-    typeof cidercade.runDailyTasks !== "function"
-  ) {
+  try {
+    eval(source);
+    if (
+      typeof cidercade !== "object" ||
+      cidercade === null ||
+      typeof cidercade.runDailyTasks !== "function"
+    ) {
+      throw new Error("Release asset did not define cidercade exports");
+    }
+  } catch (error) {
     cidercade = previous;
-    throw new Error("Release asset did not define cidercade exports");
+    throw error;
   }
 }
 
@@ -101,6 +112,7 @@ function loadCidercade(allowUpdate) {
         );
       }
     } catch (error) {
+      // Network errors, non-200 downloads, or a bad asset — keep embedded.
       console.error(
         "Cidercade Completer update failed; using embedded " +
           CIDERCADE_EMBEDDED_VERSION +
