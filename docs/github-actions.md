@@ -65,6 +65,13 @@ Secrets store your private values so the script can access your Cidercade accoun
 | `PHONE_NUMBER`        | Your Cidercade account phone number, **formatted such as** `(512) 555-0123` |
 | `DISCORD_WEBHOOK_URL` | Your Discord webhook URL from Step 2 (optional)                             |
 
+Optional Discord appearance (repository **variables**, not secrets), under [**Settings** → **Secrets and variables** → **Actions** → **Variables**](../../../settings/variables/actions):
+
+| Variable name              | What to set                                              |
+| -------------------------- | -------------------------------------------------------- |
+| `DISCORD_WEBHOOK_NAME`     | Display name in Discord (default: `Cidercade`)           |
+| `DISCORD_WEBHOOK_ICON_URL` | Avatar image URL (default: the built-in Cidercade icon) |
+
 ## Step 5: Allow the daily workflow to commit
 
 GitHub turns off scheduled workflows after 60 days of no activity. **Daily Cidercade** includes a small keep-alive step that commits so that does not happen, but it needs write access:
@@ -239,7 +246,7 @@ If there is a green check, the script succeeded and will now run every day. When
 
 ## Storage
 
-Your phone number, Discord webhook URL, and Cidercade token live as repository secrets under [**Settings** → **Secrets and variables** → **Actions**](../../../settings/secrets/actions).
+Your phone number, Discord webhook URL, and Cidercade token live as repository secrets under [**Settings** → **Secrets and variables** → **Actions**](../../../settings/secrets/actions). Optional webhook name and icon URL are repository variables on the same page.
 
 The overflowed admission piece count is a repository variable called `ADMISSION_PIECES`, under [**Variables**](../../../settings/variables/actions). That needs `GH_PAT` with **Variables: Read and write**. Without it, the count line is left out of the Discord summary. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
 

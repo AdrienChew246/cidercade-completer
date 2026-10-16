@@ -23,8 +23,12 @@ Create a `.env` file in the project root or set environment variables in your sh
 ```env
 TOKEN=your_cidercade_token
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+DISCORD_WEBHOOK_NAME=Cidercade
+DISCORD_WEBHOOK_ICON_URL=https://example.com/icon.png
 PHONE_NUMBER=(512) 555-0123
 ```
+
+`DISCORD_WEBHOOK_NAME` and `DISCORD_WEBHOOK_ICON_URL` are optional. Leave them unset (or blank) to use the default Cidercade name and icon.
 
 ### Get your Cidercade token
 
@@ -69,6 +73,6 @@ On Windows, create a scheduled task to run `bun start` daily at a specific time.
 
 ## Storage
 
-Your phone number, Discord webhook URL, and Cidercade token live in the `.env` file (or your shell environment).
+Your phone number, Discord webhook URL / name / icon, and Cidercade token live in the `.env` file (or your shell environment).
 
 The overflowed admission piece count is stored in `.admission-pieces.json` in the project root. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.

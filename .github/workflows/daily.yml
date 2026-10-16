@@ -31,6 +31,8 @@ jobs:
         env:
           TOKEN: ${{ secrets.TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_NAME: ${{ vars.DISCORD_WEBHOOK_NAME }}
+          DISCORD_WEBHOOK_ICON_URL: ${{ vars.DISCORD_WEBHOOK_ICON_URL }}
           PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
           GH_PAT: ${{ secrets.GH_PAT }}
 

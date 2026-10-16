@@ -1,9 +1,20 @@
 import { AUTHENTICATE_INSTRUCTIONS, getEnv, request } from "#runtime";
+import {
+  DEFAULT_DISCORD_WEBHOOK_ICON_URL,
+  DEFAULT_DISCORD_WEBHOOK_NAME,
+} from "./discord-defaults";
 import { isTaskSuccessful, type TaskOutcome } from "./tasks";
 
-const DISCORD_USERNAME = "Cidercade";
-const DISCORD_AVATAR_URL =
-  "https://play-lh.googleusercontent.com/R_OXYCUKoLu2iNUeIrHYxPP6aajlXR5K1icPAWt_cunCJXcPHZzl6TXO2Uu6UEQrQ5jFUkC1lDaCicvEmu64=w240-h480";
+function discordWebhookName() {
+  return getEnv("DISCORD_WEBHOOK_NAME")?.trim() || DEFAULT_DISCORD_WEBHOOK_NAME;
+}
+
+function discordWebhookIconUrl() {
+  return (
+    getEnv("DISCORD_WEBHOOK_ICON_URL")?.trim() ||
+    DEFAULT_DISCORD_WEBHOOK_ICON_URL
+  );
+}
 
 const COLOR_SUCCESS = 0x57f287;
 const COLOR_FAILURE = 0xed4245;
@@ -78,8 +89,8 @@ async function postEmbed(embed: object) {
   }
 
   const payload = {
-    username: DISCORD_USERNAME,
-    avatar_url: DISCORD_AVATAR_URL,
+    username: discordWebhookName(),
+    avatar_url: discordWebhookIconUrl(),
     embeds: [embed],
   };
 

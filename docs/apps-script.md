@@ -52,9 +52,11 @@ In the setup dialog:
 
 1. Enter the phone number on your Cidercade account, e.g. `(512) 555-0123` (use `+` for a country code outside the US)
 2. Paste your Discord webhook URL if you created one
-3. Click **Save and schedule**
+3. Choose a **daily run time** (default 12:00 AM in the script timezone, usually America/Chicago)
+4. Click **Save and schedule**
+5. If you set a webhook, a second page asks for an optional **webhook name** and **icon URL** (with a live preview). Leave either blank to use the default Cidercade name and icon.
 
-Setup schedules daily runs around midnight, and creates (or reuses) a verification Form with a form-submit trigger. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
+Setup schedules daily runs around the hour you chose, and creates (or reuses) a verification Form with a form-submit trigger. A submission URL will be shown. Copy it. Your phone automation will use it to submit its verification SMS to it.
 
 <img width="510" height="449" alt="image" src="https://github.com/user-attachments/assets/7c48d937-0a02-4a82-8d2e-08a5c20385db" />
 
@@ -136,7 +138,7 @@ Your phone automation picks up the text and submits it to the verification form.
 
 ## That’s it
 
-Daily tasks now run automatically every day around midnight. When your Cidercade token expires (about once a month), the same verification flow runs again on its own.
+Daily tasks now run automatically every day around the time you chose in Set up. When your Cidercade token expires (about once a month), the same verification flow runs again on its own.
 
 ---
 
@@ -144,7 +146,7 @@ Daily tasks now run automatically every day around midnight. When your Cidercade
 
 ## Storage
 
-Your phone number, Discord webhook URL, Cidercade token, admission piece count, and verification form ID are stored as script properties on the bound Apps Script project (**Extensions** → **Apps Script** → **Project Settings** → **Script properties**).
+Your phone number, Discord webhook URL / name / icon URL, daily run hour (`DAILY_RUN_HOUR`, `0`–`23`), Cidercade token, admission piece count, and verification form ID are stored as script properties on the bound Apps Script project (**Extensions** → **Apps Script** → **Project Settings** → **Script properties**). Blank or missing `DISCORD_WEBHOOK_NAME` / `DISCORD_WEBHOOK_ICON_URL` use the built-in defaults. The run hour uses the script timezone from **Project Settings** (default America/Chicago).
 
 The admission piece property is named `ADMISSION_PIECES`. If you know your real count, edit the `count` value there. `totalEarned` is the running total and never goes down when you use pieces.
 

@@ -9,10 +9,17 @@ import {
 import { formatError } from "@/tasks";
 import { renderSetupDialog } from "./setup-dialog" with { type: "macro" };
 import {
+  DEFAULT_DAILY_RUN_HOUR,
+  formatRunHour,
   INITIAL_FORM_ID,
+  parseRunHour,
+  type SetupDialogInitial,
   type SetupErrors,
   type SetupForm,
   type SetupResult,
+  type WebhookAppearanceErrors,
+  type WebhookAppearanceForm,
+  type WebhookAppearanceResult,
 } from "./setup-dialog/shared";
 
 // Apps Script refers to these by name, so they must match the exports below.
@@ -23,10 +30,35 @@ const ON_FORM_SUBMIT = "onFormSubmit";
 const TITLE = "Cidercade Completer";
 const VERIFICATION_QUESTION = "Verification SMS";
 const VERIFICATION_FORM_ID = "VERIFICATION_FORM_ID";
-const DAILY_RUN_HOUR = 0;
+const DAILY_RUN_HOUR_PROPERTY = "DAILY_RUN_HOUR";
 const SETUP_DIALOG_HTML = renderSetupDialog();
 const DISCORD_WEBHOOK_PATTERN =
   /^https:\/\/(?:\w+\.)?discord(?:app)?\.com\/api\/webhooks\//;
+const HTTP_URL_PATTERN = /^https?:\/\/\S+$/i;
+
+function readDailyRunHour() {
+  return parseRunHour(
+    PropertiesService.getScriptProperties().getProperty(
+      DAILY_RUN_HOUR_PROPERTY,
+    ),
+    DEFAULT_DAILY_RUN_HOUR,
+  );
+}
+
+function readWebhookAppearance(): WebhookAppearanceForm {
+  const properties = PropertiesService.getScriptProperties();
+  return {
+    name: properties.getProperty("DISCORD_WEBHOOK_NAME") ?? "",
+    iconUrl: properties.getProperty("DISCORD_WEBHOOK_ICON_URL") ?? "",
+  };
+}
+
+function clearWebhookAppearance(
+  properties: GoogleAppsScript.Properties.Properties,
+) {
+  properties.deleteProperty("DISCORD_WEBHOOK_NAME");
+  properties.deleteProperty("DISCORD_WEBHOOK_ICON_URL");
+}
 
 // The editor's Run button defaults to the first function, so keep this first.
 export async function runDailyTasks() {
@@ -35,17 +67,27 @@ export async function runDailyTasks() {
   }
 }
 
-function scheduleDailyRun() {
-  for (const trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() === RUN_DAILY_TASKS) {
-      ScriptApp.deleteTrigger(trigger);
-    }
+function triggersFor(handler: string) {
+  return ScriptApp.getProjectTriggers().filter(
+    (trigger) => trigger.getHandlerFunction() === handler,
+  );
+}
+
+/** Clock triggers cannot be edited; only recreate when the hour changes. */
+function scheduleDailyRun(hour: number, previousHour: number) {
+  const existing = triggersFor(RUN_DAILY_TASKS);
+  if (existing.length === 1 && previousHour === hour) {
+    return;
+  }
+
+  for (const trigger of existing) {
+    ScriptApp.deleteTrigger(trigger);
   }
 
   ScriptApp.newTrigger(RUN_DAILY_TASKS)
     .timeBased()
     .everyDays(1)
-    .atHour(DAILY_RUN_HOUR)
+    .atHour(hour)
     .create();
 }
 
@@ -78,11 +120,19 @@ function getOrCreateVerificationForm() {
   return { form, created: true };
 }
 
+/** Keep the form-submit trigger when it already points at this form. */
 function scheduleFormSubmit(form: GoogleAppsScript.Forms.Form) {
-  for (const trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() === ON_FORM_SUBMIT) {
-      ScriptApp.deleteTrigger(trigger);
-    }
+  const formId = form.getId();
+  const existing = triggersFor(ON_FORM_SUBMIT);
+  if (
+    existing.length === 1 &&
+    existing[0]?.getTriggerSourceId() === formId
+  ) {
+    return;
+  }
+
+  for (const trigger of existing) {
+    ScriptApp.deleteTrigger(trigger);
   }
 
   ScriptApp.newTrigger(ON_FORM_SUBMIT).forForm(form).onFormSubmit().create();
@@ -164,9 +214,11 @@ function runInBackground(task: Promise<unknown>, description: string) {
 
 export function setUp() {
   const properties = PropertiesService.getScriptProperties();
-  const initialForm: SetupForm = {
+  const initialForm: SetupDialogInitial = {
     phone: properties.getProperty("PHONE_NUMBER") ?? "",
     webhookUrl: properties.getProperty("DISCORD_WEBHOOK_URL") ?? "",
+    runHour: readDailyRunHour(),
+    timeZone: Session.getScriptTimeZone(),
   };
   // Escaping "<" keeps the JSON from closing its script tag.
   const json = JSON.stringify(initialForm).replaceAll("<", "\\u003c");
@@ -174,7 +226,7 @@ export function setUp() {
     `<script type="application/json" id="${INITIAL_FORM_ID}">${json}</script>${SETUP_DIALOG_HTML}`,
   )
     .setWidth(460)
-    .setHeight(360);
+    .setHeight(460);
   DocumentApp.getUi().showModalDialog(html, `${TITLE} setup`);
 }
 
@@ -182,6 +234,7 @@ export function setUp() {
 export function saveSetup(form: SetupForm): SetupResult {
   const phone = formatPhoneNumber(form.phone);
   const webhookUrl = form.webhookUrl.trim();
+  const runHour = parseRunHour(form.runHour, Number.NaN);
   const errors: SetupErrors = {};
   if (!phone) {
     errors.phone =
@@ -191,17 +244,23 @@ export function saveSetup(form: SetupForm): SetupResult {
     errors.webhookUrl =
       "Discord webhook URLs start with https://discord.com/api/webhooks/.";
   }
-  if (!phone || errors.webhookUrl) {
+  if (!Number.isInteger(runHour)) {
+    errors.runHour = "Pick an hour between 12:00 AM and 11:00 PM.";
+  }
+  if (!phone || errors.webhookUrl || errors.runHour) {
     return { status: "invalid", errors };
   }
 
   const properties = PropertiesService.getScriptProperties();
   const previousPhone = properties.getProperty("PHONE_NUMBER");
+  const previousHour = readDailyRunHour();
   properties.setProperty("PHONE_NUMBER", phone);
+  properties.setProperty(DAILY_RUN_HOUR_PROPERTY, String(runHour));
   if (webhookUrl) {
     properties.setProperty("DISCORD_WEBHOOK_URL", webhookUrl);
   } else {
     properties.deleteProperty("DISCORD_WEBHOOK_URL");
+    clearWebhookAppearance(properties);
   }
   // A token only works for the account it was issued to.
   if (phone !== previousPhone) {
@@ -213,26 +272,57 @@ export function saveSetup(form: SetupForm): SetupResult {
     created,
     shortcutUrl,
   } = prepareVerificationForm();
-  scheduleDailyRun();
+  scheduleDailyRun(runHour, previousHour);
   scheduleFormSubmit(verificationForm);
 
-  const schedule = `Daily tasks will run every day around ${DAILY_RUN_HOUR}:00.`;
+  const schedule = `Daily tasks will run every day around ${formatRunHour(runHour)} (${Session.getScriptTimeZone()}).`;
   const recreateNote = created
     ? " A new verification form was created, so update your phone automation with the Shortcut URL below."
     : "";
-  if (properties.getProperty("TOKEN")) {
-    return {
-      status: "saved",
-      message: `Saved. ${schedule}${recreateNote}`,
-      shortcutUrl,
-    };
-  }
+  const message = properties.getProperty("TOKEN")
+    ? `Saved. ${schedule}${recreateNote}`
+    : `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}${recreateNote}`;
 
   return {
     status: "saved",
-    message: `Saved. Create your phone automation with the Shortcut URL below, then run ${TITLE} → Run daily tasks to send a verification code and test it. ${schedule}${recreateNote}`,
+    message,
     shortcutUrl,
+    configureWebhook: Boolean(webhookUrl),
+    webhookAppearance: readWebhookAppearance(),
   };
+}
+
+/** Called by the setup dialog after a webhook URL is saved. */
+export function saveWebhookAppearance(
+  form: WebhookAppearanceForm,
+): WebhookAppearanceResult {
+  const name = form.name.trim();
+  const iconUrl = form.iconUrl.trim();
+  const errors: WebhookAppearanceErrors = {};
+  if (iconUrl && !HTTP_URL_PATTERN.test(iconUrl)) {
+    errors.iconUrl = "Icon URL must start with http:// or https://.";
+  }
+  if (errors.iconUrl) {
+    return { status: "invalid", errors };
+  }
+
+  const properties = PropertiesService.getScriptProperties();
+  if (!properties.getProperty("DISCORD_WEBHOOK_URL")) {
+    clearWebhookAppearance(properties);
+    return { status: "saved" };
+  }
+
+  if (name) {
+    properties.setProperty("DISCORD_WEBHOOK_NAME", name);
+  } else {
+    properties.deleteProperty("DISCORD_WEBHOOK_NAME");
+  }
+  if (iconUrl) {
+    properties.setProperty("DISCORD_WEBHOOK_ICON_URL", iconUrl);
+  } else {
+    properties.deleteProperty("DISCORD_WEBHOOK_ICON_URL");
+  }
+  return { status: "saved" };
 }
 
 async function authenticate(code: string) {
