@@ -40,7 +40,7 @@ Skip this if you do not want Discord notifications.
 ## Step 3: Open Set up
 
 1. Open **your copy** of the document in [Google Docs](https://docs.google.com/document/)
-2. In the top navigation bar, click **Cidercade Completer** → **Set up**
+2. In the top navigation bar, click **Cidercade Completer** → **Set up**, Refresh the page if this it hasn't shown up
 3. Accept the warning "Google hasn't verified this app" by clicking <ins>Advanced</ins> and then <ins>Go to Cidercade Completer (unsafe)</ins>
     <img width="500" height="356" alt="image" src="https://github.com/user-attachments/assets/1edd77fb-0ad9-43fd-93cb-d3fd805981e0" />
 4. Approve the Google permission prompts the first time (documents, forms, triggers, and external requests)
