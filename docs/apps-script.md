@@ -78,6 +78,10 @@ Open the instructions for your phone:
 6. Add **URL Encode** and set its text to the **Message** variable from the automation block
 7. Add **Get Contents of URL**. For the URL, use the Shortcut URL from setup, then append the **URL Encode** result. The Shortcut URL already ends with `entry…=`, so the encoded SMS becomes the field value
 
+It should look something like this:
+
+<img width="398" height="567" alt="image" src="https://github.com/user-attachments/assets/7911b126-0afc-44d4-9e51-5f4e2118926a" />
+
 </details>
 
 <details>
