@@ -61,59 +61,62 @@ Setup schedules daily runs around midnight, and creates (or reuses) a verificati
 
 ## Step 5: Create the phone automation
 
-The automation runs when a text contains `Your Cidercade verification code is:`, URL-encodes the full SMS, and requests the Shortcut URL with that text appended.
+Open the instructions for your phone:
 
-iOS 27 and later:
+<details>
+<summary>iOS 27 and later:</summary>
 
 1. Open the **Shortcuts** app
 2. Tap **+** at the bottom of your screen
 3. Tap **Edit** at the top right of your screen
 4. Tap **Automation**, then **Message**. The trigger is added as a block at the top of the shortcut
 5. On that block, tap `Sender`, replace it with `Message`, and set it to contain:
-  ```plaintext
+   ```plaintext
    Your Cidercade verification code is:
-  ```
-  > Confirm that **Confirm Before Run** is off and **Automation** is on by tapping on the arrow on top of the block
+   ```
+   > Confirm that **Confirm Before Run** is off and **Automation** is on by tapping on the arrow on top of the block
 6. Add **URL Encode** and set its text to the **Message** variable from the automation block
 7. Add **Get Contents of URL**. For the URL, use the Shortcut URL from setup, then append the **URL Encode** result. The Shortcut URL already ends with `entry…=`, so the encoded SMS becomes the field value
 
+</details>
 
-
-iOS 26 and earlier:
+<details>
+<summary>iOS 26 and earlier:</summary>
 
 1. Open the **Shortcuts** app
 2. Tap the **Automation** tab, then **+** (or **New Automation**)
 3. Search for **Message** and select **When I receive a message**
 4. Set **Message Contains** to:
-  ```plaintext
+   ```plaintext
    Your Cidercade verification code is:
-  ```
+   ```
 5. Choose **Run Immediately**, and confirm
 6. Add **URL Encode** with **Shortcut Input** as the text
 7. Add **Get Contents of URL**. For the URL, use the Shortcut URL from setup, then append the **URL Encode** result
 
+</details>
 
-
-Android:
+<details>
+<summary>Android:</summary>
 
 1. Open **MacroDroid** and tap **Add Macro**
 2. Under **Triggers**, tap **+**, search for **SMS Received** and set:
-  - **Incoming from:** Any number
-  - **Message content:** Contains `Your Cidercade verification code is:`
-3. Under **Actions**, tap **+**, search for **HTTP Request** and fill in:
 
+- **Incoming from:** Any number
+- **Message content:** Contains `Your Cidercade verification code is:`
+
+3. Under **Actions**, tap **+**, search for **HTTP Request** and fill in:
 
 | Field  | Value                                                     |
 | ------ | --------------------------------------------------------- |
 | Method | `GET`                                                     |
 | URL    | `<Shortcut URL from setup>` + URL-encoded `[sms_message]` |
 
-
 `[sms_message]` is MacroDroid's placeholder for the text of the SMS. The Shortcut URL already ends with `entry…=`, so append only the encoded message. MacroDroid can URL-encode from the **...** menu next to the URL field.
 
-1. Name the macro (e.g. `Cidercade OTP`) and save it
+4. Name the macro (e.g. `Cidercade OTP`) and save it
 
-
+</details>
 
 > Prefer not to use a phone automation? When you get the verification text, open the **Cidercade Completer** form in your Google Drive, paste the SMS into **Verification SMS**, and submit. Verification codes expire, so do this soon after the text arrives.
 
