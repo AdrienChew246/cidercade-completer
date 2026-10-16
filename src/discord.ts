@@ -1,4 +1,5 @@
-import { isTaskSuccessful, type TaskOutcome } from "./task";
+import { AUTHENTICATE_INSTRUCTIONS, getEnv, request } from "#runtime";
+import { isTaskSuccessful, type TaskOutcome } from "./tasks";
 
 const DISCORD_USERNAME = "Cidercade";
 const DISCORD_AVATAR_URL =
@@ -62,14 +63,13 @@ export async function postRunSummary(outcomes: TaskOutcome[]) {
 export async function postInvalidTokenNotice() {
   await postEmbed({
     title: "Token Invalid",
-    description:
-      "Sending OTP to phone. Run the **Authenticate Cidercade** workflow with the verification SMS.",
+    description: `Sending OTP to phone. ${AUTHENTICATE_INSTRUCTIONS}`,
     color: COLOR_FAILURE,
   });
 }
 
 async function postEmbed(embed: object) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const webhookUrl = getEnv("DISCORD_WEBHOOK_URL");
   if (!webhookUrl) {
     console.warn(
       "DISCORD_WEBHOOK_URL is not set; skipping Discord notification",
@@ -83,7 +83,7 @@ async function postEmbed(embed: object) {
     embeds: [embed],
   };
 
-  const res = await fetch(webhookUrl, {
+  const res = await request(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

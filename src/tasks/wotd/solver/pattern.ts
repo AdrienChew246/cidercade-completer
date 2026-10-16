@@ -1,4 +1,4 @@
-import type { LetterDelta, WOTDAttempt } from "..";
+import type { LetterDelta, WOTDAttempt } from "@/tasks/wotd";
 
 const PATTERN_MULTIPLIERS = [81, 27, 9, 3, 1] as const;
 type WordCodes = readonly [number, number, number, number, number];

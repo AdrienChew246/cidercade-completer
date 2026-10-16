@@ -1,5 +1,5 @@
-import { postEndUsers } from "..";
-import { type GameResult, markAlreadyCompleted, type Task } from "../task";
+import { postEndUsers } from "@/hang";
+import { type GameResult, markAlreadyCompleted, type Task } from "@/tasks";
 import { getBestGuess } from "./solver";
 export type LetterDelta = {
   provided: string;

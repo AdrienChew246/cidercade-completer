@@ -23,23 +23,12 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --production
 
-      - name: Extract verification code
-        env:
-          MESSAGE: ${{ inputs.message }}
-        run: |
-          if [[ ! "$MESSAGE" =~ (^|[^0-9])([0-9]{6})([^0-9]|$) ]]; then
-            echo "::error::No six digit verification code found in the message"
-            exit 1
-          fi
-          code="${BASH_REMATCH[2]}"
-          echo "::add-mask::$code"
-          echo "OTP_CODE=$code" >> "$GITHUB_ENV"
-
-      - name: Exchange code for JWT
+      - name: Exchange verification SMS for JWT
         env:
           PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
+          VERIFICATION_MESSAGE: ${{ inputs.message }}
         run: |
           jwt="$(bun run otp)"
           echo "::add-mask::$jwt"

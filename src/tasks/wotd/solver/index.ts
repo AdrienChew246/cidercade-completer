@@ -1,4 +1,4 @@
-import type { WOTDAttempt } from "..";
+import type { WOTDAttempt } from "@/tasks/wotd";
 import { filterRemainingWords, selectGuessCandidates } from "./filter";
 import { calculateEntropy, precomputeCodes, wordToCodes } from "./pattern";
 import { ALL_WORDS, WORDLE_ANSWERS, WORDLE_ANSWERS_SET } from "./words";

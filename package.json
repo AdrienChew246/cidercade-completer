@@ -3,15 +3,26 @@
   "module": "index.ts",
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
-    "@types/bun": "latest"
+    "@google/clasp": "^3.4.1",
+    "@types/bun": "latest",
+    "@types/google-apps-script": "^2.0.13",
+    "preact": "^11.0.1"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "otp": "bun run src/otp.ts",
+    "otp": "bun run scripts/otp.ts",
+    "gs:build": "bun run scripts/build-apps-script.ts",
+    "gs:push": "bun run gs:build && clasp push --force",
     "test:wotd-solver": "bun run scripts/test-wotd-solver.ts"
+  },
+  "imports": {
+    "#runtime": {
+      "apps-script": "./src/runtime/apps-script.ts",
+      "default": "./src/runtime/bun.ts"
+    }
   },
   "type": "module",
   "dependencies": {
