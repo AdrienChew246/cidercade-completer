@@ -44,7 +44,6 @@ Skip this if you do not want Discord notifications.
 3. Accept the warning "Google hasn't verified this app" by clicking Advanced and then Go to Cidercade Completer (unsafe)
   ![image](https://github.com/user-attachments/assets/1edd77fb-0ad9-43fd-93cb-d3fd805981e0)
 4. Approve all of Google permission prompts the first time (documents, forms, triggers, external requests, and managing Apps Script projects for self-update)
-  ![image](https://github.com/user-attachments/assets/80180925-6273-4179-814a-e3e7ab7bc7b8)
 5. For self updating, turn on the Apps Script API for your Google account: open [Apps Script settings](https://script.google.com/home/usersettings) and enable **Google Apps Script API**
 
 
